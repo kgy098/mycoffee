@@ -42,7 +42,7 @@ export default function OnEventHistoryPage() {
 
         if (typeof window !== 'undefined') {
             setPhoneNumber(user.data?.phone || '');
-            setName(user.data?.username || '');
+            setName(user.data?.display_name || '');
         }
     }, []);
 
