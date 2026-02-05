@@ -4,7 +4,7 @@ import { useEffect, Suspense } from 'react';
 import { useSearchParams, useRouter } from 'next/navigation'; 
 import Image from 'next/image';
 import MainBanner from '@/components/MainBanner';
-import MyCoffeeSummary from '@/components/MyCoffeeSummary';
+import MyCoffeeSummary from '@/components/MyCoffeeSummary'; 
 import TodaysCoffeePick from '@/components/TodaysCoffeePick';
 import UserReviews from '@/components/UserReviews';
 import CoffeeStories from '@/components/CoffeeStories';
