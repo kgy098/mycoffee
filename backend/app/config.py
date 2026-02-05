@@ -7,7 +7,7 @@ class Settings(BaseSettings):
     """Application settings from environment variables"""
     
     # Database
-    db_host: str = "49.247.7.124"
+    db_host: str = "158.247.232.223"
     db_port: int = 3306
     db_user: str = "coffee"
     db_password: str = "dnjsxjcl591!"
