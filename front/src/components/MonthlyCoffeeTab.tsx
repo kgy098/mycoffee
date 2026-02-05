@@ -42,8 +42,8 @@ const MonthlyCoffeeTab = () => {
     useEffect(() => {
         const fetchMonthlyCoffee = async () => {
             try {
-                const response = await fetch('http://localhost:8000/api/monthly-coffees/current?visible_only=true');
-                if (response.ok) {
+                    // MonthlyCoffeeTab.tsx
+                    const response = await fetch(`${process.env.NEXT_PUBLIC_API_BASE_URL}/api/monthly-coffees/current?visible_only=true`);                if (response.ok) {
                     const data = await response.json();
                     if (data && data.length > 0) {
                         setMonthlyCoffee(data[0]);

@@ -7,7 +7,7 @@ class Settings(BaseSettings):
     """Application settings from environment variables"""
     
     # Database
-    db_host: str = "158.247.232.223"
+    db_host: str = "127.0.0.1"
     db_port: int = 3306
     db_user: str = "coffee"
     db_password: str = "dnjsxjcl591!"
@@ -19,7 +19,7 @@ class Settings(BaseSettings):
     api_title: str = "MyCoffee.AI API"
     
     # CORS
-    frontend_url: str = "http://localhost:3000"
+    frontend_url: str = "https://mycoffeeai.connet.co.kr"
     
     # Security
     secret_key: str = "your_secret_key_change_in_production"
