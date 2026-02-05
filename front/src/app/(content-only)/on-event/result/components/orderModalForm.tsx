@@ -44,11 +44,11 @@ const OrderModalForm = ({
             
             setFormData(prev => ({
                 ...prev,
-                name: user.data?.username,
+                name: user.data?.display_name,
                 ...(isPhoneNumeric && { phone }),
             }));
         }
-    }, [user.data?.user_id, user.data?.phone, user.data?.username]);
+    }, [user.data?.user_id, user.data?.phone, user.data?.display_name]);
     
     const handleOpenPostcode = useCallback(() => {
         if (typeof window === "undefined") return;
