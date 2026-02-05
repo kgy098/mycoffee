@@ -6,10 +6,16 @@ import { Pagination } from "swiper/modules";
 import "swiper/css";
 import "swiper/css/pagination";
 
-const CoffeeCollectionSlider: React.FC = ({data}: {data?: any}) => {
+interface StorySection {
+    title: string;
+    icon: string;
+    content: string[];
+}
+
+const CoffeeCollectionSlider: React.FC<{ data?: StorySection[] }> = ({ data }) => {
     const [activeSlide, setActiveSlide] = useState(0);
 
-    const slides = data || [
+    const slides = data && data.length > 0 ? data : [
         {
             id: 1,
             title: "이렇게 즐겨보세요.",
@@ -59,8 +65,8 @@ const CoffeeCollectionSlider: React.FC = ({data}: {data?: any}) => {
                 onSlideChange={(swiper) => setActiveSlide(swiper.activeIndex)}
                 className="w-full"
             >
-                {slides.map((slide) => (
-                    <SwiperSlide key={slide.id}>
+                {slides.map((slide, index) => (
+                    <SwiperSlide key={index}>
                         <div className="bg-white rounded-lg px-4 py-3 min-h-[174px] border border-border-default">
                             <div className="flex items-center gap-1 mb-2">
                                 <span className="text-sm">{slide.icon}</span>

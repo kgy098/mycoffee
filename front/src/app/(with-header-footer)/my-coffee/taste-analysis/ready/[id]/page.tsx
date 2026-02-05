@@ -1,22 +1,64 @@
 "use client";
 
-import React, { useEffect, useState } from "react";
+import React, { useEffect, useMemo, useState } from "react";
 import { useParams } from "next/navigation";
 import CoffeeCollectionSlider from "@/components/CoffeeCollectionSlider";
 import LikeModal from "./components/LikeModal";
 import OrderingComponent from "../../../components/ordering/Ordering";
 import ActionSheet from "@/components/ActionSheet";
 import Link from "next/link";
-import { useTasteAnalysis } from "../../TasteAnalysisContext";
 import { CoffeePreferences } from "@/types/coffee";
 import { useGet } from "@/hooks/useApi";
 import SpiderChart from "@/app/(content-only)/analysis/SpiderChart";
 import OtherCoffeeSlider from "@/components/OtherCoffeeSlider";
 
+interface AnalysisResultDetail {
+    id: number;
+    created_at: string;
+    blend: {
+        id: number;
+        name: string;
+        summary?: string | null;
+        thumbnail_url?: string | null;
+        acidity: number;
+        sweetness: number;
+        body: number;
+        nuttiness: number;
+        bitterness: number;
+    } | null;
+    taste_profile: CoffeePreferences;
+    origins: { origin: string; pct: number }[];
+    origin_summary?: string | null;
+    summary?: string | null;
+    interpretation?: string | null;
+}
+
+interface AiStoryResponse {
+    sections: {
+        title: string;
+        icon: string;
+        content: string[];
+    }[];
+}
+
+interface SimilarBlend {
+    id: number;
+    name: string;
+    summary?: string | null;
+    acidity: number;
+    sweetness: number;
+    body: number;
+    nuttiness: number;
+    bitterness: number;
+    similarity_score?: number | null;
+}
+
 const CoffeeAnalysisDetail = () => {
 
     const params = useParams();
-    const coffeeBlendId = params.id;
+    const resultIdParam = Array.isArray(params.id) ? params.id[0] : params.id;
+    const resultId = Number(resultIdParam);
+    const canFetch = Number.isFinite(resultId) && resultId > 0;
     const [openItems, setOpenItems] = useState<number[]>([0, 1, 2]);
     const [tasteRatings, setTasteRatings] = useState<CoffeePreferences>({
         aroma: 1,
@@ -28,18 +70,47 @@ const CoffeeAnalysisDetail = () => {
 
     const [isLikeModalOpen, setIsLikeModalOpen] = useState(false);
     const [likedItemSaved, setLikedItemSaved] = useState(false);
-    const { recommendations } = useTasteAnalysis();
-    const recommendation = recommendations.find((recommendation) => recommendation.coffee_blend_id === coffeeBlendId);
+
+    const { data: analysisDetail, isLoading: isDetailLoading } = useGet<AnalysisResultDetail>(
+        ["analysis-result-detail", resultId],
+        `/api/analysis-results/${resultId}`,
+        {},
+        { enabled: canFetch }
+    );
+
+    const { data: aiStory } = useGet<AiStoryResponse>(
+        ["analysis-result-ai-story", resultId],
+        `/api/analytics/ai-story/${resultId}`,
+        {},
+        { enabled: canFetch }
+    );
+
+    const { data: similarBlends } = useGet<SimilarBlend[]>(
+        ["analysis-result-similar", resultId],
+        `/api/analytics/similar/${resultId}`,
+        { params: { limit: 5 } },
+        { enabled: canFetch }
+    );
 
     useEffect(() => {
-        setTasteRatings({
-            aroma: recommendation?.aroma_score || 1,
-            sweetness: recommendation?.sweetness_score || 1,
-            body: recommendation?.body_score || 1,
-            nutty: recommendation?.nutty_score || 1,
-            acidity: recommendation?.acidity_score || 1
-        })
-    }, [recommendation]);
+        if (analysisDetail?.taste_profile) {
+            setTasteRatings({
+                aroma: analysisDetail.taste_profile.aroma || 1,
+                sweetness: analysisDetail.taste_profile.sweetness || 1,
+                body: analysisDetail.taste_profile.body || 1,
+                nutty: analysisDetail.taste_profile.nutty || 1,
+                acidity: analysisDetail.taste_profile.acidity || 1
+            });
+        }
+    }, [analysisDetail]);
+
+    const originSummary = useMemo(() => {
+        if (analysisDetail?.origin_summary) return analysisDetail.origin_summary;
+        if (!analysisDetail?.origins?.length) return null;
+        return analysisDetail.origins.map((origin) => `${origin.origin} ${origin.pct}%`).join(", ");
+    }, [analysisDetail]);
+
+    const summaryText = analysisDetail?.summary || "향긋한 꽃향기와 크리미한 바디감이 인상 깊습니다.";
 
     const accordionItems = [
         {
@@ -55,27 +126,6 @@ const CoffeeAnalysisDetail = () => {
             title: "다른 커피는 어때요?",
         }
     ];
-
-    const { data: coffeeBlend } = useGet<any>(
-        ['/analytics/similar', coffeeBlendId],
-        `/analytics/similar/${coffeeBlendId}`,
-        {
-            params: {
-                limit: 5
-            }
-        },
-        {
-            enabled: !!coffeeBlendId
-        }
-    );
-    const { data: AIStory } = useGet<any>(
-        ['/analytics/ai-story', coffeeBlendId],
-        `/analytics/ai-story/${coffeeBlendId}`,
-        {},
-        {
-            enabled: !!coffeeBlendId
-        }
-    );
 
     const toggleItem = (id: number) => {
         setOpenItems(prev =>
@@ -94,13 +144,22 @@ const CoffeeAnalysisDetail = () => {
             <div className="overflow-y-auto h-[calc(100vh-253px)] pl-4 pt-3 pb-2">
                 <div className="pr-4">
                     <h2 className="text-[20px] font-bold text-gray-0 mb-2 text-center leading-[28px]">나만의 커피 취향을 찾아볼까요?</h2>
-                    <p className="text-xs text-gray-0 mb-6 text-center leading-[18px]">" 향긋한 꽃향기와 크리미한 바디감이 인상 깊습니다. "</p>
+                    <p className="text-xs text-gray-0 mb-6 text-center leading-[18px]">" {summaryText} "</p>
                 </div>
 
                 <div className="">
 
+                    {isDetailLoading ? (
+                        <div className="flex justify-center items-center py-12">
+                            <div className="animate-spin rounded-full h-10 w-10 border-b-2 border-action-primary"></div>
+                        </div>
+                    ) : !analysisDetail ? (
+                        <div className="text-center py-8">
+                            <p className="text-text-secondary">분석 결과를 찾을 수 없습니다.</p>
+                        </div>
+                    ) : (
                     <div className="space-y-[26px]">
-                        {accordionItems.map((item, index) => (
+                        {accordionItems.map((item) => (
                             <div key={item.id} className="overflow-hidden">
                                 <div className="pr-[22px]">
                                     <button
@@ -144,7 +203,7 @@ const CoffeeAnalysisDetail = () => {
                                                 {/* Origin Info */}
                                                 <div className="text-center mb-4">
                                                     <p className="text-xs text-gray-0 leading-[16px]">
-                                                        (브라질 42%, 페루 58%)
+                                                        {originSummary ? `(${originSummary})` : "원두 배합 정보가 없습니다."}
                                                     </p>
                                                 </div>
 
@@ -154,11 +213,11 @@ const CoffeeAnalysisDetail = () => {
                                         ) : item.id === 1 ? (
                                             <div>
                                                 {/* Coffee Collection Slider */}
-                                                <CoffeeCollectionSlider />
+                                                <CoffeeCollectionSlider data={aiStory?.sections} />
                                             </div>
                                         ) : item.id === 2 ? (
                                             <div>                                                
-                                                <OtherCoffeeSlider />
+                                                <OtherCoffeeSlider data={similarBlends || []} />
                                             </div>
                                         ) : null}
                                     </div>
@@ -166,6 +225,7 @@ const CoffeeAnalysisDetail = () => {
                             </div>
                         ))}
                     </div>
+                    )}
                 </div>
             </div>
 

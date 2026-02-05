@@ -1,11 +1,11 @@
 """Analysis Results routes"""
 from fastapi import APIRouter, Depends, HTTPException
 from sqlalchemy.orm import Session
-from sqlalchemy import and_
 from datetime import datetime, timedelta
 from typing import List, Optional
+import json
 from app.database import get_db
-from app.models import AnalysisResult, Blend
+from app.models import AnalysisResult, Blend, BlendOrigin
 from pydantic import BaseModel
 
 router = APIRouter()
@@ -25,6 +25,49 @@ class AnalysisResultResponse(BaseModel):
     
     class Config:
         from_attributes = True
+
+
+class BlendOriginResponse(BaseModel):
+    origin: str
+    pct: int
+    display_order: Optional[int] = None
+
+    class Config:
+        from_attributes = True
+
+
+class BlendDetailResponse(BaseModel):
+    id: int
+    name: str
+    summary: Optional[str]
+    thumbnail_url: Optional[str]
+    acidity: int
+    sweetness: int
+    body: int
+    nuttiness: int
+    bitterness: int
+
+    class Config:
+        from_attributes = True
+
+
+class TasteProfileResponse(BaseModel):
+    aroma: int
+    sweetness: int
+    body: int
+    nutty: int
+    acidity: int
+
+
+class AnalysisResultDetailResponse(BaseModel):
+    id: int
+    created_at: datetime
+    blend: Optional[BlendDetailResponse]
+    taste_profile: TasteProfileResponse
+    origins: List[BlendOriginResponse]
+    origin_summary: Optional[str]
+    summary: Optional[str]
+    interpretation: Optional[str]
 
 
 @router.get("/analysis-results", response_model=List[AnalysisResultResponse])
@@ -83,6 +126,64 @@ async def get_recent_analysis_results(
         )
     
     return response_data
+
+
+@router.get("/analysis-results/{result_id}", response_model=AnalysisResultDetailResponse)
+async def get_analysis_result_detail(
+    result_id: int,
+    db: Session = Depends(get_db)
+):
+    """
+    단일 분석 결과 상세 조회
+    """
+    result = db.query(AnalysisResult).filter(AnalysisResult.id == result_id).first()
+
+    if not result:
+        raise HTTPException(status_code=404, detail="분석 결과를 찾을 수 없습니다")
+
+    blend = None
+    origins: List[BlendOrigin] = []
+    if result.blend_id:
+        blend = db.query(Blend).filter(Blend.id == result.blend_id).first()
+        if blend:
+            origins = (
+                db.query(BlendOrigin)
+                .filter(BlendOrigin.blend_id == blend.id)
+                .order_by(BlendOrigin.display_order.asc(), BlendOrigin.id.asc())
+                .all()
+            )
+
+    origin_summary = None
+    if origins:
+        origin_summary = ", ".join([f"{item.origin} {item.pct}%" for item in origins])
+
+    summary = blend.summary if blend and blend.summary else None
+    if result.interpretation:
+        try:
+            parsed = json.loads(result.interpretation)
+            if not isinstance(parsed, (dict, list)):
+                summary = result.interpretation
+        except Exception:
+            summary = result.interpretation
+
+    taste_profile = TasteProfileResponse(
+        aroma=result.acidity,
+        sweetness=result.sweetness,
+        body=result.body,
+        nutty=result.nuttiness,
+        acidity=result.bitterness,
+    )
+
+    return AnalysisResultDetailResponse(
+        id=result.id,
+        created_at=result.created_at,
+        blend=BlendDetailResponse.model_validate(blend) if blend else None,
+        taste_profile=taste_profile,
+        origins=[BlendOriginResponse.model_validate(item) for item in origins],
+        origin_summary=origin_summary,
+        summary=summary,
+        interpretation=result.interpretation,
+    )
 
 
 @router.delete("/analysis-results/{result_id}")

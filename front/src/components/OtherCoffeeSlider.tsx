@@ -24,9 +24,33 @@ interface CoffeeBlend {
     ratings: TasteRating;
 }
 
-const OtherCoffeeSlider: React.FC = () => {
+interface SimilarBlend {
+    id: number;
+    name: string;
+    summary?: string | null;
+    acidity: number;
+    sweetness: number;
+    body: number;
+    nuttiness: number;
+    bitterness: number;
+}
 
-    const coffeeBlends: CoffeeBlend[] = [
+const OtherCoffeeSlider: React.FC<{ data?: SimilarBlend[] }> = ({ data }) => {
+
+    const coffeeBlends: CoffeeBlend[] = data && data.length > 0
+        ? data.map((blend) => ({
+            name: blend.name,
+            description: blend.summary || "깔끔한 마무리와 산뜻한 입안 감촉이 좋은 커피입니다.",
+            hashtags: [],
+            ratings: {
+                aroma: blend.acidity,
+                acidity: blend.bitterness,
+                sweetness: blend.sweetness,
+                nutty: blend.nuttiness,
+                body: blend.body
+            }
+        }))
+        : [
         {
             name: "벨벳 터치 블렌드",
             description: "오늘, 깊고 깔끔한 맛을 가진, 마시기 편한 Deep Body Blend가 당신에게 딱 맞습니다.",
