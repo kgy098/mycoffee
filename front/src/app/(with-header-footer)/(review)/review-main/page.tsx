@@ -318,7 +318,10 @@ const ReviewMain = () => {
           </div>
         )}
 
-        <button className="btn-primary w-full">
+        <button
+          className="btn-primary w-full"
+          onClick={() => router.push("/profile/reviews/write-review")}
+        >
           내 커피 추천하기
         </button>
       </div>

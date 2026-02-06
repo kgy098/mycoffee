@@ -3,12 +3,17 @@ import ActionSheet from "@/components/ActionSheet";
 import React, { useEffect, useState } from "react";
 import Link from "next/link";
 import { useHeaderStore } from "@/stores/header-store";
+import { usePut } from "@/hooks/useApi";
+import { useUserStore } from "@/stores/user-store";
 const Bullet = () => (
   <span className="inline-block w-1 h-1  bg-gray-0 rounded-full mr-2 ml-1 translate-y-[-2px]" />
 );
 
 const MarketingPermission = () => {
   const [isAgreed, setIsAgreed] = useState(false);
+  const [agreedAt, setAgreedAt] = useState<string | null>(null);
+  const { user } = useUserStore();
+  const userId = user?.data?.user_id;
 
   const { setHeader } = useHeaderStore();
 
@@ -19,8 +24,16 @@ const MarketingPermission = () => {
     });
   }, []);
 
+  const { mutate: updateConsent } = usePut("/api/user-consents", {
+    onSuccess: (data) => {
+      setAgreedAt(data?.agreed_at || new Date().toISOString());
+      setIsAgreed(true);
+    }
+  });
+
   const handleAgree = () => {
-    setIsAgreed(true);
+    if (!userId) return;
+    updateConsent({ user_id: userId, consent_type: "marketing", is_agreed: true });
   };
 
   return (
@@ -101,7 +114,7 @@ const MarketingPermission = () => {
             <br />
             전송매체 : 이메일,SMS,푸시 알림
             <br />
-            수신 동의 일시 : 2025년 08월 31일
+            수신 동의 일시 : {agreedAt ? new Date(agreedAt).toLocaleDateString("ko-KR") : "-"}
             <br />
             처리내용 : 수신 동의 처리 완료
           </div>

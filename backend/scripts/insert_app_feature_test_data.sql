@@ -69,3 +69,12 @@ INSERT INTO coffee_tips (title, content, thumbnail_url, created_at) VALUES
 
 INSERT INTO events (title, content, thumbnail_url, status, push_on_publish, reward_points, reward_coupon_id, created_at) VALUES
 ('테스트 이벤트', '테스트 이벤트 상세 내용입니다.', 'https://example.com/images/event.jpg', '진행중', 1, 100, NULL, NOW());
+
+-- 7) 알림/마케팅 동의
+INSERT INTO user_consents (user_id, consent_type, is_agreed, agreed_at) VALUES
+(@user_id, 'push', 1, NOW()),
+(@user_id, 'marketing', 1, NOW());
+
+-- 8) 리뷰 (메인/리뷰탭 표시용)
+INSERT INTO reviews (user_id, blend_id, rating, content, photo_url, status, points_awarded, created_at) VALUES
+(@user_id, @blend_id, 5, '향도 좋고 밸런스가 좋아서 재구매 의사 있어요.', 'https://example.com/images/review.jpg', 'approved', 1, NOW());

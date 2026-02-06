@@ -118,7 +118,7 @@ const MyPage = () => {
       {/* Management List */}
       <div className="bg-white rounded-2xl border border-border-default p-3">
         {/* Payment Method Management */}
-        <Link href="#" className="flex items-center justify-between py-1.5">
+        <Link href="/profile/settings/my-settings" className="flex items-center justify-between py-1.5">
           <div className="flex items-center gap-2">
             <div className="w-8 h-8 bg-[rgba(0,0,0,0.05)] rounded-full flex items-center justify-center">
               <img src="/icons/wallet.svg" alt="wallet" className="w-5 h-5" />

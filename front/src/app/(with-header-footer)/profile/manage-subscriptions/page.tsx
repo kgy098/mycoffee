@@ -65,7 +65,7 @@ const ManageSubscriptions = () => {
                 nextPaymentDate: nextBilling ? nextBilling.toLocaleDateString("ko-KR") : "-",
                 nextDeliveryDate: nextDelivery ? nextDelivery.toLocaleDateString("ko-KR") : "-",
                 deliveryName: item.delivery_address?.recipient_name || "-",
-                deliveryAddress: item.delivery_address?.address_line1 || "-",
+                deliveryAddress: [item.delivery_address?.address_line1, item.delivery_address?.address_line2].filter(Boolean).join(" ") || "-",
                 phone: item.delivery_address?.phone_number || "-",
                 buttons: ["결제 수단 관리"],
             };
@@ -119,13 +119,13 @@ const ManageSubscriptions = () => {
                         {/* Product details and price */}
                         <div className="flex items-center justify-between mb-4">
                             <div className="text-sm text-text-secondary flex items-center gap-1">
-                                {["카페인", "홀빈", "벌크", "500g", "라벨"].map((item, idx) => (
+                                {(item.details || []).map((detail, idx) => (
                                     <span
                                         key={idx}
                                         className="text-[12px] leading-[16px] flex items-center gap-1"
                                     >
-                                        {item}{" "}
-                                        {idx !== 4 && (
+                                        {detail}{" "}
+                                        {idx !== item.details.length - 1 && (
                                             <span className="size-1 bg-[#9CA3AF] rounded-full inline-block"></span>
                                         )}
                                     </span>
@@ -150,7 +150,7 @@ const ManageSubscriptions = () => {
                             </div>
                             <div className="flex justify-between">
                                 <span className="">배송지</span>
-                                <span className="font-bold">이기홍</span>
+                                <span className="font-bold">{item.deliveryName}</span>
                             </div>
                         </div>
 
@@ -173,9 +173,8 @@ const ManageSubscriptions = () => {
                                     </svg>
                                 </div>
                                 <div className="space-y-1 text-text-secondary">
-                                    <p className="text-xs font-bold leading-[18px] text-text-primary">인천 부평구 길주남로 113번길 12</p>
-                                    <p className="text-xs font-normal leading-[18px]">동아아파트 2동 512호</p>
-                                    <p className="text-xs font-normal leading-[18px]">010-2934-3017</p>
+                                    <p className="text-xs font-bold leading-[18px] text-text-primary">{item.deliveryAddress}</p>
+                                    <p className="text-xs font-normal leading-[18px]">{item.phone}</p>
                                 </div>
                             </div>
                         </div>

@@ -7,6 +7,9 @@ import OrderingComponent from "../../components/ordering/Ordering";
 import SpiderChart from "@/app/(content-only)/analysis/SpiderChart";
 import CoffeeCollectionSlider from "@/components/CoffeeCollectionSlider";
 import { useGet } from "@/hooks/useApi";
+import { useMutation, useQueryClient } from "@tanstack/react-query";
+import { api } from "@/lib/api";
+import { useUserStore } from "@/stores/user-store";
 import { CoffeePreferences } from "@/types/coffee";
 
 const CollectionDetail = () => {
@@ -16,6 +19,8 @@ const CollectionDetail = () => {
   const canFetch = Number.isFinite(collectionId) && collectionId > 0;
   const [openItems, setOpenItems] = useState<number[]>([0, 1, 2]); // First item open by default
   const [isLikeModalOpen, setIsLikeModalOpen] = useState(false);
+  const queryClient = useQueryClient();
+  const { data } = useUserStore((state) => state.user);
 
   const { data: collectionDetail, isLoading } = useGet<any>(
     ["collection-detail", collectionId],
@@ -68,9 +73,31 @@ const CollectionDetail = () => {
     );
   };
 
+  const { mutate: updateCollection } = useMutation({
+    mutationFn: async ({ collection_name, personal_comment, blend_id }: { collection_name: string; personal_comment: string; blend_id: number; }) => {
+      const response = await api.put(`/api/collections/${collectionId}`, {
+        user_id: data?.user_id,
+        analysis_result_id: collectionDetail?.analysis_result_id || null,
+        blend_id,
+        collection_name,
+        personal_comment,
+      });
+      return response.data;
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["collection-detail", collectionId] });
+      queryClient.invalidateQueries({ queryKey: ["collections", data?.user_id] });
+      setIsLikeModalOpen(false);
+    }
+  });
+
   const handleLikeSave = (coffeeName: string, comment: string) => {
-    console.log("Saved coffee:", { coffeeName, comment });
-    // Here you can add logic to save the coffee to your database or state
+    if (!collectionDetail?.blend?.id) return;
+    updateCollection({
+      collection_name: coffeeName,
+      personal_comment: comment,
+      blend_id: collectionDetail.blend.id
+    });
   };
 
   return (
@@ -237,6 +264,7 @@ const CollectionDetail = () => {
 
       {/* Like Modal */}
       <LikeModal
+        data={collectionDetail || null}
         isOpen={isLikeModalOpen}
         onClose={() => setIsLikeModalOpen(false)}
         onSave={handleLikeSave}

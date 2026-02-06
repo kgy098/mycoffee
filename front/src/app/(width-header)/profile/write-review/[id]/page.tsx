@@ -2,22 +2,72 @@
 
 import ActionSheet from "@/components/ActionSheet";
 import { useHeaderStore } from "@/stores/header-store";
-import { useEffect, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
+import { useParams, useRouter } from "next/navigation";
+import { useGet, usePost } from "@/hooks/useApi";
+import { useUserStore } from "@/stores/user-store";
 
 const WriteReview = () => {
     const [images, setImages] = useState<string[]>([]);
     const [imageCount, setImageCount] = useState(0);
     const [textareaValue, setTextareaValue] = useState("");
     const [registerModalIsOpen, setRegisterModalIsOpen] = useState(false);
+    const [rating, setRating] = useState(0);
     const maxImages = 3;
+    const router = useRouter();
+    const params = useParams();
+    const orderItemIdParam = Array.isArray(params.id) ? params.id[0] : params.id;
+    const orderItemId = Number(orderItemIdParam);
 
     const { setHeader } = useHeaderStore();
+    const { data: user } = useUserStore((state) => state.user);
 
     useEffect(() => {
         setHeader({
             title: "리뷰 작성", 
         });
     }, []);
+
+    const { data: reviewableItems } = useGet<any[]>(
+        ["reviewable-orders", user?.data?.user_id],
+        "/api/reviews/reviewable",
+        { params: { user_id: user?.data?.user_id } },
+        { enabled: !!user?.data?.user_id }
+    );
+
+    const reviewItem = useMemo(() => {
+        return (reviewableItems || []).find(
+            (item) => Number(item.order_item_id || item.order_id) === orderItemId
+        );
+    }, [reviewableItems, orderItemId]);
+
+    if (!reviewItem) {
+        return (
+            <div className="p-4 text-gray-0">
+                <div className="bg-white rounded-2xl px-4 py-6 border border-border-default text-center text-text-secondary">
+                    리뷰 작성 정보를 찾을 수 없습니다.
+                </div>
+            </div>
+        );
+    }
+
+    const { mutate: submitReview, isPending: isSubmitting } = usePost("/api/reviews", {
+        onSuccess: () => {
+            setRegisterModalIsOpen(true);
+        }
+    });
+
+    const handleSubmit = () => {
+        if (!reviewItem || !user?.data?.user_id || !rating || !textareaValue.trim()) return;
+        submitReview({
+            user_id: user.data.user_id,
+            blend_id: reviewItem.blend_id,
+            rating,
+            content: textareaValue.trim(),
+            photo_url: images[0] || null,
+            order_item_id: reviewItem.order_item_id || null,
+        });
+    };
 
     const handleImageUpload = (event: React.ChangeEvent<HTMLInputElement>) => {
         const files = event.target.files;
@@ -47,33 +97,32 @@ const WriteReview = () => {
 
     return (
         <div className="p-4 text-gray-0 flex flex-col h-full">
-            <h3 className="text-sm font-bold leading-[20px] mb-2">상품에 대해 문의사항을 작성해주세요.</h3>
+            <h3 className="text-sm font-bold leading-[20px] mb-2">리뷰 별점을 선택해주세요.</h3>
             <div className="flex items-center gap-2 mb-4">
-                <svg xmlns="http://www.w3.org/2000/svg" width="28" height="28" viewBox="0 0 28 28" fill="none">
-                    <path d="M13.9999 2.33398L17.6049 9.63732L25.6666 10.8157L19.8333 16.4973L21.2099 24.524L13.9999 20.7323L6.78992 24.524L8.16658 16.4973L2.33325 10.8157L10.3949 9.63732L13.9999 2.33398Z" fill="#FFC107" stroke="#FFC107" strokeWidth="0.5" strokeLinecap="round" strokeLinejoin="round" />
-                </svg>
-                <svg xmlns="http://www.w3.org/2000/svg" width="28" height="28" viewBox="0 0 28 28" fill="none">
-                    <path d="M13.9999 2.33398L17.6049 9.63732L25.6666 10.8157L19.8333 16.4973L21.2099 24.524L13.9999 20.7323L6.78992 24.524L8.16658 16.4973L2.33325 10.8157L10.3949 9.63732L13.9999 2.33398Z" fill="#FFC107" stroke="#FFC107" strokeWidth="0.5" strokeLinecap="round" strokeLinejoin="round" />
-                </svg>
-                <svg xmlns="http://www.w3.org/2000/svg" width="28" height="28" viewBox="0 0 28 28" fill="none">
-                    <path d="M13.9999 2.33398L17.6049 9.63732L25.6666 10.8157L19.8333 16.4973L21.2099 24.524L13.9999 20.7323L6.78992 24.524L8.16658 16.4973L2.33325 10.8157L10.3949 9.63732L13.9999 2.33398Z" fill="#FFC107" stroke="#FFC107" strokeWidth="0.5" strokeLinecap="round" strokeLinejoin="round" />
-                </svg>
-                <svg xmlns="http://www.w3.org/2000/svg" width="28" height="28" viewBox="0 0 28 28" fill="none">
-                    <path d="M13.9999 2.33398L17.6049 9.63732L25.6666 10.8157L19.8333 16.4973L21.2099 24.524L13.9999 20.7323L6.78992 24.524L8.16658 16.4973L2.33325 10.8157L10.3949 9.63732L13.9999 2.33398Z" fill="#E6E6E6" />
-                </svg>
-                <svg xmlns="http://www.w3.org/2000/svg" width="28" height="28" viewBox="0 0 28 28" fill="none">
-                    <path d="M13.9999 2.33398L17.6049 9.63732L25.6666 10.8157L19.8333 16.4973L21.2099 24.524L13.9999 20.7323L6.78992 24.524L8.16658 16.4973L2.33325 10.8157L10.3949 9.63732L13.9999 2.33398Z" fill="#E6E6E6" />
-                </svg>
+                {[1, 2, 3, 4, 5].map((star) => (
+                    <button
+                        key={star}
+                        type="button"
+                        onClick={() => setRating(star)}
+                        className="cursor-pointer"
+                    >
+                        <svg xmlns="http://www.w3.org/2000/svg" width="28" height="28" viewBox="0 0 28 28" fill="none">
+                            <path d="M13.9999 2.33398L17.6049 9.63732L25.6666 10.8157L19.8333 16.4973L21.2099 24.524L13.9999 20.7323L6.78992 24.524L8.16658 16.4973L2.33325 10.8157L10.3949 9.63732L13.9999 2.33398Z" fill={star <= rating ? "#FFC107" : "#E6E6E6"} stroke={star <= rating ? "#FFC107" : "#E6E6E6"} strokeWidth="0.5" strokeLinecap="round" strokeLinejoin="round" />
+                        </svg>
+                    </button>
+                ))}
             </div>
 
-            <h3 className="text-sm font-bold leading-[20px] mb-3">상품에 대해 문의사항을 작성해주세요.</h3>
+            <h3 className="text-sm font-bold leading-[20px] mb-3">
+                {reviewItem?.blend_name ? `${reviewItem.blend_name}에 대한 리뷰를 작성해주세요.` : "리뷰를 작성해주세요."}
+            </h3>
             <textarea
                 rows={10}
                 maxLength={300}
                 value={textareaValue}
                 onChange={(e) => setTextareaValue(e.target.value)}
                 className="mb-4 bg-white placeholder:text-[#6E6E6E] placeholder:font-normal font-bold border border-[#E6E6E6] text-gray-0 text-[12px] rounded-lg focus:outline-none focus:ring-[#A45F37] focus:border-[#A45F37] block w-full py-2.5 px-4"
-                placeholder="문의를 남겨주시면 빠르게 답변해드리겠습니다."
+                placeholder="리뷰를 남겨주세요."
             />
 
             {/* Photo Upload Section */}
@@ -147,10 +196,10 @@ const WriteReview = () => {
 
             <button
                 className={`w-full mt-auto btn-primary`}
-                disabled={!textareaValue.trim()}
-                onClick={() => setRegisterModalIsOpen(true)}
+                disabled={!textareaValue.trim() || rating === 0 || isSubmitting}
+                onClick={handleSubmit}
             >
-                문의 등록하기
+                {isSubmitting ? "등록 중..." : "리뷰 등록하기"}
             </button>
 
             <ActionSheet
@@ -158,18 +207,24 @@ const WriteReview = () => {
                 onClose={() => setRegisterModalIsOpen(false)}
             >
                 <div className="text-center">
+                    <p className="text-base font-bold text-gray-0 mb-6 leading-[20px]">
+                        리뷰 등록이 완료되었습니다.
+                    </p>
                     <div className="flex flex-col gap-2">
                         <button
-                            onClick={() => setRegisterModalIsOpen(false)}
+                            onClick={() => {
+                                setRegisterModalIsOpen(false);
+                                router.push("/profile/reviews/history");
+                            }}
                             className="w-full btn-primary"
                         >
-                            사진촬영
+                            내 리뷰 보기
                         </button>
                         <button
                             onClick={() => setRegisterModalIsOpen(false)}
                             className="w-full btn-primary-empty border border-action-primary text-action-primary"
                         >
-                            갤러리
+                            닫기
                         </button>
                     </div>
                 </div>

@@ -48,7 +48,7 @@ const ReviewWrite = () => {
             {/* Review Items List */}
             <div className="space-y-3">
                 {reviewItems.map((item) => (
-                    <div key={item.id} className="bg-white rounded-2xl px-4 py-3 border border-border-default">
+                    <div key={item.order_item_id || item.order_id} className="bg-white rounded-2xl px-4 py-3 border border-border-default">
                         {/* Header with date and order number */}
                         <div className="flex items-center justify-between border-b border-border-default pb-4 mb-4">
                             <span className="text-[12px] font-bold leading-[160%] text-gray-500">
@@ -57,7 +57,7 @@ const ReviewWrite = () => {
                                     : ""} | {item.order_number}
                             </span>
                             <Link
-                                href={`/profile/write-review/${item.id}`}
+                                href={`/profile/write-review/${item.order_item_id || item.order_id}`}
                                 className="text-[12px] font-bold flex items-center gap-2 text-[#3182F6]"
                             >
                                 주문 상세보기
@@ -91,7 +91,7 @@ const ReviewWrite = () => {
                         </div>
 
                         <Link
-                            href={`/profile/write-review/${item.id}`}
+                            href={`/profile/write-review/${item.order_item_id || item.order_id}`}
                             className="btn-action block text-center"
                         >
                             리뷰 작성

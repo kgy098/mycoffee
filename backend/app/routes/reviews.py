@@ -43,6 +43,7 @@ class ReviewDetailResponse(ReviewListItem):
 
 
 class ReviewableOrderItem(BaseModel):
+    order_item_id: int
     order_id: int
     order_number: str
     order_date: datetime
@@ -187,6 +188,7 @@ async def list_reviewable_order_items(
             continue
         reviewable.append(
             ReviewableOrderItem(
+                order_item_id=item.id,
                 order_id=item.order_id,
                 order_number=order_number,
                 order_date=created_at,

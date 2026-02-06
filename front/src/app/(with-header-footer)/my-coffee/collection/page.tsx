@@ -11,10 +11,10 @@ import { api } from "@/lib/api";
 
 type SelectItem = {
   id: number;
-  collection_name: string;
-  personal_comment: string;
+  collection_name?: string;
+  personal_comment?: string;
   created_at: string;
-  blend_name: string;
+  blend_name?: string;
   blend_id: number;
 };
 
@@ -29,7 +29,7 @@ const CollectionPage = () => {
 
   const { data: myCollection, isLoading } = useGet<SelectItem[]>(
     ["collections", data?.user_id],
-    "/collections",
+    "/api/collections",
     { params: { user_id: data?.user_id } },
     { enabled: !!data?.user_id }
   );
@@ -141,14 +141,14 @@ const CollectionPage = () => {
               return (
               <div key={analysis.id} className="bg-white rounded-2xl px-4 py-3 border border-border-default">
                 <div className="mb-4">
-                  <h3 className="text-sm font-bold text-gray-0 mb-2">{analysis.collection_name}</h3>
+                  <h3 className="text-sm font-bold text-gray-0 mb-2">{analysis.collection_name || "내 커피 컬렉션"}</h3>
                   <p className="text-[12px] text-text-secondary mb-2 font-normal">{dateText} {timeText}</p>
 
                   <div className="flex items-center justify-center w-fit bg-[rgba(0,0,0,0.05)] rounded-lg px-2 py-1 mb-4">
-                    <span className="text-[12px] text-gray-0 font-medium leading-[160%]">{analysis.blend_name}</span>
+                    <span className="text-[12px] text-gray-0 font-medium leading-[160%]">{analysis.blend_name || "블렌드"}</span>
                   </div>
 
-                  <p className="text-[12px] text-gray-0 leading-[150%]">{analysis.personal_comment}</p>
+                  <p className="text-[12px] text-gray-0 leading-[150%]">{analysis.personal_comment || ""}</p>
                 </div>
 
                 <div className="flex items-center justify-between gap-2">

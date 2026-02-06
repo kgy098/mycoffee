@@ -3,6 +3,8 @@
 import { useState } from 'react';
 import { Swiper, SwiperSlide } from 'swiper/react';
 import Image from 'next/image';
+import Link from 'next/link';
+import { useGet } from '@/hooks/useApi';
 
 // Import Swiper styles
 import 'swiper/css';
@@ -14,40 +16,41 @@ interface CoffeeStory {
     date: string;
     image: string;
     category: string;
+    link: string;
 }
 
 const CoffeeStories = () => {
     const [activeTab, setActiveTab] = useState('커피스토리');
 
+    const { data: stories } = useGet<any[]>(['home-coffee-stories'], '/api/coffee-stories');
+    const { data: events } = useGet<any[]>(['home-events'], '/api/events');
+    const { data: tips } = useGet<any[]>(['home-coffee-tips'], '/api/coffee-tips');
+
     const coffeeStories: CoffeeStory[] = [
-        {
-            id: 1,
-            title: "오늘의 커피 이야기 : 콜롬비아 수프리마",
-            date: "2025.08.20",
-            image: "/images/coffee-story.png",
-            category: "커피스토리"
-        },
-        {
-            id: 2,
-            title: "오늘의 커피 이야기 : 콜롬비아 수프리마",
-            date: "2025.08.19",
-            image: "/images/coffee-story.png",
-            category: "이벤트"
-        },
-        {
-            id: 4,
-            title: "오늘의 커피 이야기 : 콜롬비아 수프리마",
-            date: "2025.08.20",
-            image: "/images/coffee-story.png",
-            category: "커피스토리"
-        },
-        {
-            id: 3,
-            title: "오늘의 커피 이야기 : 콜롬비아 수프리마",
-            date: "2025.08.18",
-            image: "/images/coffee-story.png",
-            category: "커피 꿀팁"
-        }
+        ...(stories || []).map((story) => ({
+            id: story.id,
+            title: story.title,
+            date: story.created_at ? new Date(story.created_at).toLocaleDateString('ko-KR') : '',
+            image: story.thumbnail_url || '/images/coffee-story.png',
+            category: '커피스토리',
+            link: `/community/coffee-story-main/${story.id}`,
+        })),
+        ...(events || []).map((event) => ({
+            id: event.id,
+            title: event.title,
+            date: event.created_at ? new Date(event.created_at).toLocaleDateString('ko-KR') : '',
+            image: event.thumbnail_url || '/images/coffee-story.png',
+            category: '이벤트',
+            link: `/community/event-main/${event.id}`,
+        })),
+        ...(tips || []).map((tip) => ({
+            id: tip.id,
+            title: tip.title,
+            date: tip.created_at ? new Date(tip.created_at).toLocaleDateString('ko-KR') : '',
+            image: tip.thumbnail_url || '/images/coffee-story.png',
+            category: '커피 꿀팁',
+            link: `/community/coffee-tip-main/${tip.id}`,
+        })),
     ];
 
     const filteredStories = coffeeStories.filter(story => story.category === activeTab);
@@ -80,7 +83,7 @@ const CoffeeStories = () => {
             >
                 {filteredStories.map((story) => (
                     <SwiperSlide key={story.id}>
-                        <div className="rounded-t-xl overflow-hidden">
+                        <Link href={story.link} className="rounded-t-xl overflow-hidden block">
                             {/* Story Image */}
                             <div className="relative h-[180px]">
                                 <Image
@@ -103,7 +106,7 @@ const CoffeeStories = () => {
                                 </h3>
                                 <p className="text-[12px] text-text-secondary font-normal leading-[16px]">{story.date}</p>
                             </div>
-                        </div>
+                        </Link>
                     </SwiperSlide>
                 ))}
             </Swiper>

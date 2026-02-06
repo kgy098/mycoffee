@@ -1,18 +1,15 @@
 "use client";
 
 import React, { useState } from "react";
-import { useRouter } from "next/navigation";
 import { CircleAlert } from "lucide-react";
 
 interface LikeModalProps {
   isOpen: boolean;
   onClose: () => void;
   onSave: (coffeeName: string, comment: string) => void;
-  setLikedItemSaved: (likedItemSaved: boolean) => void;
 }
 
-const LikeModal: React.FC<LikeModalProps> = ({ isOpen, onClose, onSave, setLikedItemSaved }) => {
-  const router = useRouter();
+const LikeModal: React.FC<LikeModalProps> = ({ isOpen, onClose, onSave }) => {
   const [coffeeName, setCoffeeName] = useState("");
   const [comment, setComment] = useState("");
   const [errors, setErrors] = useState<{coffeeName?: string; comment?: string}>({});
@@ -47,9 +44,6 @@ const LikeModal: React.FC<LikeModalProps> = ({ isOpen, onClose, onSave, setLiked
       setErrors({});
       setIsDuplicate(false);
       onClose();
-      setLikedItemSaved(true);
-      // Redirect to collection page
-      // router.push('/my-coffee/collection');
     }
   };
 

@@ -8,7 +8,8 @@ import OrderingComponent from "../../../components/ordering/Ordering";
 import ActionSheet from "@/components/ActionSheet";
 import Link from "next/link";
 import { CoffeePreferences } from "@/types/coffee";
-import { useGet } from "@/hooks/useApi";
+import { useGet, usePost } from "@/hooks/useApi";
+import { useUserStore } from "@/stores/user-store";
 import SpiderChart from "@/app/(content-only)/analysis/SpiderChart";
 import OtherCoffeeSlider from "@/components/OtherCoffeeSlider";
 
@@ -70,6 +71,9 @@ const CoffeeAnalysisDetail = () => {
 
     const [isLikeModalOpen, setIsLikeModalOpen] = useState(false);
     const [likedItemSaved, setLikedItemSaved] = useState(false);
+    const [savedCollectionId, setSavedCollectionId] = useState<number | null>(null);
+    const { user } = useUserStore();
+    const userId = user?.data?.user_id || 0;
 
     const { data: analysisDetail, isLoading: isDetailLoading } = useGet<AnalysisResultDetail>(
         ["analysis-result-detail", resultId],
@@ -135,8 +139,25 @@ const CoffeeAnalysisDetail = () => {
         );
     };
 
+    const { mutate: saveCollection } = usePost('/api/collections/save', {
+        onSuccess: (data) => {
+            setSavedCollectionId(data?.id || null);
+            setLikedItemSaved(true);
+            setIsLikeModalOpen(false);
+        }
+    });
+
     const handleLikeSave = (coffeeName: string, comment: string) => {
-        console.log('Saved coffee:', { coffeeName, comment });
+        if (!analysisDetail?.blend?.id || !userId) {
+            return;
+        }
+        saveCollection({
+            user_id: userId,
+            analysis_result_id: analysisDetail.id,
+            blend_id: analysisDetail.blend.id,
+            collection_name: coffeeName,
+            personal_comment: comment
+        });
     };
 
     return (
@@ -250,7 +271,6 @@ const CoffeeAnalysisDetail = () => {
                 isOpen={isLikeModalOpen}
                 onClose={() => setIsLikeModalOpen(false)}
                 onSave={handleLikeSave}
-                setLikedItemSaved={setLikedItemSaved}
             />
 
             <ActionSheet
@@ -259,7 +279,10 @@ const CoffeeAnalysisDetail = () => {
             >
                 <p className="text-base font-bold text-gray-0 mb-6 text-center leading-[20px]">컬렉션 저장 완료!<br />이어서 한 번에 주문까지 끝내시겠어요?</p>
                 <div className="flex flex-col gap-2">
-                    <Link href={'/my-coffee/collection/1'} className="btn-primary text-center">
+                    <Link
+                        href={savedCollectionId ? `/my-coffee/collection/${savedCollectionId}` : '/my-coffee/collection'}
+                        className="btn-primary text-center"
+                    >
                         지금 주문하기
                     </Link>
                     <Link href={'/my-coffee/collection'} className="btn-primary-empty text-center">

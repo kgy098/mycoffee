@@ -63,7 +63,7 @@ const ManageSubscriptionsDetail = () => {
             nextPaymentDate: nextBilling ? nextBilling.toLocaleDateString("ko-KR") : "-",
             nextDeliveryDate: nextDelivery ? nextDelivery.toLocaleDateString("ko-KR") : "-",
             deliveryName: subscription.delivery_address?.recipient_name || "-",
-            deliveryAddress: subscription.delivery_address?.address_line1 || "-",
+            deliveryAddress: [subscription.delivery_address?.address_line1, subscription.delivery_address?.address_line2].filter(Boolean).join(" ") || "-",
             phone: subscription.delivery_address?.phone_number || "-",
         };
     }, [subscription]);

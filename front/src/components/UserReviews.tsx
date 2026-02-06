@@ -2,6 +2,8 @@
 
 import { Swiper, SwiperSlide } from 'swiper/react';
 import Image from 'next/image';
+import Link from 'next/link';
+import { useGet } from '@/hooks/useApi';
 
 // Import Swiper styles
 import 'swiper/css';
@@ -9,7 +11,6 @@ import 'swiper/css';
 interface UserReview {
     name: string;
     id: number;
-    avatar: string;
     rating: number;
     comment: string;
     product: string;
@@ -19,45 +20,33 @@ interface UserReview {
 
 const UserReviews = () => {
 
-    const userReviews: UserReview[] = [
-        {
-            name: "이**",
-            id: 1,
-            avatar: "👤",
-            rating: 3,
-            comment: "제 취향에 맞는 커피라서 너무 행복해용ㅎㅎ",
-            product: "벨벳 터치 블렌드",
-            date: "2일전",
-            images: ["/images/coffee.png", "/images/coffee.png"]
-        },
-        {
-            name: "김**",
-            id: 2,
-            avatar: "👤",
-            rating: 5,
-            comment: "제 취향에 맞는 커피라서 너무 행복해용ㅎㅎ",
-            product: "딥 바디 블렌드",
-            date: "1일전",
-            images: ["/images/coffee.png"]
-        },
-        {
-            name: "박**",
-            id: 3,
-            avatar: "👤",
-            rating: 4,
-            comment: "제 취향에 맞는 커피라서 너무 행복해용ㅎㅎ",
-            product: "아로마 블렌드",
-            date: "3일전"
-        }
-    ];
+    const { data: reviews } = useGet<any[]>(
+        ['home-reviews'],
+        '/api/reviews',
+        { params: { sort: 'latest', photo_only: true } }
+    );
+
+    const userReviews: UserReview[] = (reviews || []).slice(0, 8).map((review) => ({
+        id: review.id,
+        name: review.user_display_name || '익명',
+        rating: review.rating || 0,
+        comment: review.content || '',
+        product: review.blend_name || '',
+        date: review.created_at
+            ? new Date(review.created_at).toLocaleDateString('ko-KR')
+            : '',
+        images: review.photo_url ? [review.photo_url] : [],
+    }));
 
     return (
         <div className="mb-3 bg-background-sub py-3 px-4 pr-0 text-gray-0">
             <div className="flex items-center justify-between mb-3 pr-6">
                 <h2 className="text-base font-bold">모이면 더 맛있는 커피 리뷰</h2>
-                <svg className='cursor-pointer' xmlns="http://www.w3.org/2000/svg" width="8" height="12" viewBox="0 0 8 12" fill="none">
-                    <path d="M1.5 10.5L6.5 6L1.5 1.5" stroke="#1A1A1A" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" />
-                </svg>
+                <Link href="/review-main" className="cursor-pointer">
+                    <svg xmlns="http://www.w3.org/2000/svg" width="8" height="12" viewBox="0 0 8 12" fill="none">
+                        <path d="M1.5 10.5L6.5 6L1.5 1.5" stroke="#1A1A1A" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" />
+                    </svg>
+                </Link>
             </div>
             <Swiper
                 spaceBetween={12}
@@ -101,7 +90,7 @@ const UserReviews = () => {
                             </div>
 
                             {/* Comment */}
-                            <p className="text-[12px] mb-2 font-normal leading-[160%]">{review.comment}</p>
+                            <p className="text-[12px] mb-2 font-normal leading-[160%] line-clamp-2">{review.comment}</p>
 
                             {/* Images - maksimal 2 ta */}
                             {review.images && review.images.length > 0 && (
