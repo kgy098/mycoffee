@@ -1,6 +1,6 @@
 import { create } from 'zustand';
 
-interface Order {
+interface OrderItem {
     caffeineStrength?: "CAFFEINE" | "DECAFFEINE" | "";
     grindLevel?: "WHOLE_BEAN" | "GROUND" | "";
     packaging?: "STICK" | "BULK" | "";
@@ -10,15 +10,36 @@ interface Order {
     price?: number;
     totalPrice?: number;
     deliveryDate?: string; 
-}[]
+    blend_id?: number;
+    blend_name?: string;
+    collection_id?: number;
+    collection_name?: string;
+}
+
+interface OrderMeta {
+    blend_id?: number;
+    blend_name?: string;
+    collection_id?: number;
+    collection_name?: string;
+    price?: number;
+}
+
+interface SubscriptionInfo {
+    total_cycles?: number;
+    first_delivery_date?: string;
+}
 
 interface OrderStore {
-    order: Order[];
-    setOrder: (order: Order[]) => void;
+    order: OrderItem[];
+    setOrder: (order: OrderItem[]) => void;
     resetOrder: () => void;
     increaseQuantity: (index: number) => void;
     decreaseQuantity: (index: number) => void;
     removeItem: (index: number) => void;
+    currentMeta: OrderMeta;
+    setCurrentMeta: (meta: OrderMeta) => void;
+    subscriptionInfo: SubscriptionInfo;
+    setSubscriptionInfo: (info: SubscriptionInfo) => void;
 }
 
 interface OrderImage {
@@ -32,7 +53,7 @@ interface OrderImageStore {
 
 export const useOrderStore = create<OrderStore>((set) => ({
     order: [],
-    setOrder: (order: Order[]) => set({ order }),
+    setOrder: (order: OrderItem[]) => set({ order }),
     resetOrder: () => set({ order: [] }),
     increaseQuantity: (index: number) => set((state) => ({ order: state.order.map((item, i) => i === index ? { ...item, quantity: item.quantity! + 1 } : item) })),
 
@@ -48,6 +69,10 @@ export const useOrderStore = create<OrderStore>((set) => ({
         }
     }),
     removeItem: (index: number) => set((state) => ({ order: state.order.filter((item, i) => i !== index) })),
+    currentMeta: {},
+    setCurrentMeta: (meta: OrderMeta) => set({ currentMeta: meta }),
+    subscriptionInfo: {},
+    setSubscriptionInfo: (info: SubscriptionInfo) => set({ subscriptionInfo: info }),
 }));
 
 export const useOrderImageStore = create<OrderImageStore>((set) => ({

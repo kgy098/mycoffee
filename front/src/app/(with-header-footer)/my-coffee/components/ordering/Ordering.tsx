@@ -14,11 +14,21 @@ const OrderingComponent = ({
   title,
   isTooltipOpenHave = true,
   children,
+  blendId,
+  blendName,
+  collectionId,
+  collectionName,
+  price,
 }: {
   className?: string;
   title?: string;
   isTooltipOpenHave?: boolean;
   children?: React.ReactNode;
+  blendId?: number;
+  blendName?: string;
+  collectionId?: number;
+  collectionName?: string;
+  price?: number;
 }) => {
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [isTooltipOpen, setIsTooltipOpen] = useState(true);
@@ -26,10 +36,17 @@ const OrderingComponent = ({
   const [orderLabelOption, setOrderLabelOption] = useState(false);
   const [orderSubscriptionDeleviryDate, setOrderSubscriptionDeleviryDate] = useState(false);
 
-  const { order, increaseQuantity, decreaseQuantity } = useOrderStore();
+  const { order, increaseQuantity, decreaseQuantity, setCurrentMeta } = useOrderStore();
   const router = useRouter();
 
   const openModal = () => {
+    setCurrentMeta({
+      blend_id: blendId,
+      blend_name: blendName,
+      collection_id: collectionId,
+      collection_name: collectionName,
+      price,
+    });
     setIsModalOpen(true);
   };
 

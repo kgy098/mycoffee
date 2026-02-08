@@ -8,6 +8,7 @@ import OtherCoffeeSlider from "@/components/OtherCoffeeSlider";
 import { useSearchParams } from "next/navigation";
 import { useGet } from "@/hooks/useApi";
 import { CoffeePreferences } from "@/types/coffee";
+import OrderingComponent from "@/app/(with-header-footer)/my-coffee/components/ordering/Ordering";
 
 const ReviewAnalysys = () => {
   const [openItems, setOpenItems] = useState<number[]>([0, 1, 2]); // First item open by default
@@ -221,9 +222,11 @@ const ReviewAnalysys = () => {
             </svg>
           </button>
 
-          {/* <OrderingComponent title={"주문하기"} /> */}
-
-          <button className="w-full btn-primary">주문하기</button>
+          <OrderingComponent
+            title={"주문하기"}
+            blendId={blendDetail?.id}
+            blendName={blendDetail?.name}
+          />
         </div>
       </div>
 

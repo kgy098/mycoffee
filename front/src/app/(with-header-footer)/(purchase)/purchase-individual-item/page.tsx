@@ -1,16 +1,16 @@
 "use client";
-import React, { useState, useEffect } from "react";
+import React, { useMemo, useState, useEffect } from "react";
 import { ChevronUp, ChevronDown, ChevronRight, XIcon } from "lucide-react";
 import { useHeaderStore } from "@/stores/header-store";
 import { useOrderStore } from "@/stores/order-store";
-import { usePost } from "@/hooks/useApi";
+import { useGet, usePost } from "@/hooks/useApi";
 import { useUserStore } from "@/stores/user-store";
-import { useParams } from "next/navigation";
+import { useRouter } from "next/navigation";
 const PurchaseIndividualItem = () => {
 
   const { order, increaseQuantity, decreaseQuantity, removeItem } = useOrderStore();
   const { user } = useUserStore();
-  const params = useParams();
+  const router = useRouter();
   const { setHeader } = useHeaderStore();
   const [pointUsage, setPointUsage] = useState(0);
   const [agreements, setAgreements] = useState({
@@ -44,7 +44,36 @@ const PurchaseIndividualItem = () => {
     }
   };
 
-  const availablePoints = 12000;
+  const userId = user?.data?.user_id;
+
+  const { data: pointsBalance } = useGet<{ balance: number }>(
+    ["points-balance", userId],
+    "/api/points/balance",
+    { params: { user_id: userId } },
+    { enabled: !!userId }
+  );
+
+  const { data: defaultAddress } = useGet<any>(
+    ["default-delivery-address", userId],
+    "/api/delivery-addresses/default",
+    { params: { user_id: userId } },
+    { enabled: !!userId }
+  );
+
+  const { data: deliveryAddresses } = useGet<any[]>(
+    ["delivery-addresses", userId],
+    "/api/delivery-addresses",
+    { params: { user_id: userId } },
+    { enabled: !!userId }
+  );
+
+  const selectedAddress = useMemo(() => {
+    if (defaultAddress) return defaultAddress;
+    if (deliveryAddresses && deliveryAddresses.length > 0) return deliveryAddresses[0];
+    return null;
+  }, [defaultAddress, deliveryAddresses]);
+
+  const availablePoints = pointsBalance?.balance ?? 0;
 
   const handlePointUsage = (type: "all" | "custom") => {
     if (type === "all") {
@@ -90,45 +119,47 @@ const PurchaseIndividualItem = () => {
   const totalPrice = totalProductPrice - pointUsage + deliveryFee;
 
 
-  const { mutate: orderSingle, isPending: isCreatingOrder } = usePost('/orders/single');
+  const isOrderReady = order.length > 0 && order.every((item) => !!item.blend_id);
+
+  const { mutate: orderSingle, isPending: isCreatingOrder } = usePost("/api/orders/single", {
+    onSuccess: (data: any) => {
+      router.push(`/success-order?orderId=${data?.id ?? ""}`);
+    },
+  });
 
   // Handle form submission
   const submitOder = () => {
+    if (!userId || !selectedAddress || order.length === 0) return;
+    const items = order
+      .filter((item) => !!item.blend_id)
+      .map((item) => ({
+        blend_id: item.blend_id as number,
+        collection_id: item.collection_id,
+        collection_name: item.collection_name,
+        quantity: item.quantity || 1,
+        unit_price: item.price,
+        options: {
+          caffeine: item.caffeineStrength,
+          grind: item.grindLevel,
+          package: item.packaging,
+          weight: item.weight,
+        },
+      }));
+
+    if (items.length === 0) return;
+
     orderSingle({
-      user_id: user?.data?.user_id,
-      collection_id: 1001,
-      analysis_id: 2001,
-      order_items: [
-        {
-          coffee_blend_id: "BLEND_001",
-          collection_name: "내 컬렉션",
-          caffeine_type: "DECAF",
-          grind_type: "WHOLE_BEAN",
-          package_type: "BAG",
-          weight_option: "250G",
-          quantity: 2,
-          unit_price: 15000,
-          total_price: 30000,
-          has_custom_label: false
-        }
-      ],
-      recipient_name: "홍길동",
-      recipient_phone: "010-1234-5678",
-      postal_code: "12345",
-      address: "서울시 강남구 테헤란로 123",
-      address_detail: "456호",
-      point_discount: 1000,
-      shipping_fee: 3000,
-      payment_method: "CARD",
-      agreements: [
-        {
-          key: "TERMS_OF_SERVICE",
-          agreed: true,
-          version: "1.0"
-        }
-      ]
+      user_id: userId,
+      order_type: "single",
+      delivery_address_id: selectedAddress.id,
+      payment_method: "card",
+      total_amount: totalPrice,
+      discount_amount: pointUsage,
+      points_used: pointUsage,
+      delivery_fee: deliveryFee,
+      items,
     });
-  }
+  };
 
   return (
     <>
@@ -153,7 +184,7 @@ const PurchaseIndividualItem = () => {
                 <div key={idx} className="border border-border-default rounded-lg p-3 mt-4">
                   <div className="flex justify-between items-start mb-2">
                     <p className="font-bold text-xs leading-[18px] text-gray-0">
-                      나만의 커피 {idx + 1}호기/클래식 하모니 블랜드
+                      {item.collection_name || item.blend_name || `나만의 커피 ${idx + 1}호기`}
                     </p>
                     <button onClick={() => removeItem(idx)}>
                       <XIcon size={16} stroke="#1A1A1A" />
@@ -252,37 +283,46 @@ const PurchaseIndividualItem = () => {
           <div className="bg-white rounded-lg p-3 border border-border-default">
             <div className="flex items-center justify-between cursor-pointer">
               <h2 className="text-sm leading-[20px] font-bold">배송지 정보</h2>
-              <span className="text-[12px] leading-[16px] text-[#3182F6] font-bold">
+              <button
+                onClick={() => router.push("/delivery-address-management")}
+                className="text-[12px] leading-[16px] text-[#3182F6] font-bold"
+              >
                 변경
-              </span>
+              </button>
             </div>
 
-            <div className="flex items-start gap-3 mt-4">
-              <div className="w-8 h-8 bg-action-secondary rounded-full flex items-center justify-center flex-shrink-0">
-                <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 16 16" fill="none">
-                  <g clip-path="url(#clip0_2859_14531)">
-                    <path d="M10.0002 14.6664C9.82335 14.6664 9.65378 14.5962 9.52876 14.4712C9.40373 14.3462 9.3335 14.1766 9.3335 13.9998V11.3331C9.33348 11.2234 9.36055 11.1153 9.4123 11.0186C9.46405 10.9218 9.53889 10.8393 9.63016 10.7784L11.6302 9.44511C11.7397 9.37202 11.8685 9.33301 12.0002 9.33301C12.1319 9.33301 12.2606 9.37202 12.3702 9.44511L14.3702 10.7784C14.4614 10.8393 14.5363 10.9218 14.588 11.0186C14.6398 11.1153 14.6668 11.2234 14.6668 11.3331V13.9998C14.6668 14.1766 14.5966 14.3462 14.4716 14.4712C14.3465 14.5962 14.177 14.6664 14.0002 14.6664H10.0002Z" stroke="#62402D" strokeWidth="1.33333" strokeLinecap="round" strokeLinejoin="round" />
-                    <path d="M12.0002 6.66634C12.0002 5.25185 11.4383 3.8953 10.4381 2.89511C9.43787 1.89491 8.08132 1.33301 6.66683 1.33301C5.25234 1.33301 3.89579 1.89491 2.89559 2.89511C1.8954 3.8953 1.3335 5.25185 1.3335 6.66634C1.3335 9.99501 5.02616 13.4617 6.26616 14.5323C6.38174 14.619 6.52235 14.6658 6.66683 14.6657" stroke="#62402D" strokeWidth="1.33333" strokeLinecap="round" strokeLinejoin="round" />
-                    <path d="M12 14.667V12.667" stroke="#62402D" strokeWidth="1.33333" strokeLinecap="round" strokeLinejoin="round" />
-                    <path d="M6.6665 8.66699C7.77107 8.66699 8.6665 7.77156 8.6665 6.66699C8.6665 5.56242 7.77107 4.66699 6.6665 4.66699C5.56193 4.66699 4.6665 5.56242 4.6665 6.66699C4.6665 7.77156 5.56193 8.66699 6.6665 8.66699Z" stroke="#62402D" strokeWidth="1.33333" strokeLinecap="round" strokeLinejoin="round" />
-                  </g>
-                  <defs>
-                    <clipPath id="clip0_2859_14531">
-                      <rect width="16" height="16" fill="white" />
-                    </clipPath>
-                  </defs>
-                </svg>
-              </div>
+            {selectedAddress ? (
+              <div className="flex items-start gap-3 mt-4">
+                <div className="w-8 h-8 bg-action-secondary rounded-full flex items-center justify-center flex-shrink-0">
+                  <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 16 16" fill="none">
+                    <g clip-path="url(#clip0_2859_14531)">
+                      <path d="M10.0002 14.6664C9.82335 14.6664 9.65378 14.5962 9.52876 14.4712C9.40373 14.3462 9.3335 14.1766 9.3335 13.9998V11.3331C9.33348 11.2234 9.36055 11.1153 9.4123 11.0186C9.46405 10.9218 9.53889 10.8393 9.63016 10.7784L11.6302 9.44511C11.7397 9.37202 11.8685 9.33301 12.0002 9.33301C12.1319 9.33301 12.2606 9.37202 12.3702 9.44511L14.3702 10.7784C14.4614 10.8393 14.5363 10.9218 14.588 11.0186C14.6398 11.1153 14.6668 11.2234 14.6668 11.3331V13.9998C14.6668 14.1766 14.5966 14.3462 14.4716 14.4712C14.3465 14.5962 14.177 14.6664 14.0002 14.6664H10.0002Z" stroke="#62402D" strokeWidth="1.33333" strokeLinecap="round" strokeLinejoin="round" />
+                      <path d="M12.0002 6.66634C12.0002 5.25185 11.4383 3.8953 10.4381 2.89511C9.43787 1.89491 8.08132 1.33301 6.66683 1.33301C5.25234 1.33301 3.89579 1.89491 2.89559 2.89511C1.8954 3.8953 1.3335 5.25185 1.3335 6.66634C1.3335 9.99501 5.02616 13.4617 6.26616 14.5323C6.38174 14.619 6.52235 14.6658 6.66683 14.6657" stroke="#62402D" strokeWidth="1.33333" strokeLinecap="round" strokeLinejoin="round" />
+                      <path d="M12 14.667V12.667" stroke="#62402D" strokeWidth="1.33333" strokeLinecap="round" strokeLinejoin="round" />
+                      <path d="M6.6665 8.66699C7.77107 8.66699 8.6665 7.77156 8.6665 6.66699C8.6665 5.56242 7.77107 4.66699 6.6665 4.66699C5.56193 4.66699 4.6665 5.56242 4.6665 6.66699C4.6665 7.77156 5.56193 8.66699 6.6665 8.66699Z" stroke="#62402D" strokeWidth="1.33333" strokeLinecap="round" strokeLinejoin="round" />
+                    </g>
+                    <defs>
+                      <clipPath id="clip0_2859_14531">
+                        <rect width="16" height="16" fill="white" />
+                      </clipPath>
+                    </defs>
+                  </svg>
+                </div>
 
-              <div className="flex-1">
-                <p className="text-xs leading-[18px] font-bold">
-                  이기홍 01012341234
-                </p>
-                <p className="text-xs leading-[18px] font-bold">
-                  인천 부평구 길주남로123번길 12
-                </p>
+                <div className="flex-1">
+                  <p className="text-xs leading-[18px] font-bold">
+                    {selectedAddress.recipient_name} {selectedAddress.phone_number}
+                  </p>
+                  <p className="text-xs leading-[18px] font-bold">
+                    {selectedAddress.address_line1} {selectedAddress.address_line2 || ""}
+                  </p>
+                </div>
               </div>
-            </div>
+            ) : (
+              <p className="text-xs leading-[18px] text-text-secondary mt-4">
+                배송지를 등록해주세요.
+              </p>
+            )}
           </div>
 
           {/* 포인트 사용 (Point Usage) */}
@@ -458,11 +498,17 @@ const PurchaseIndividualItem = () => {
         </div>
         <div className="pt-4 w-full ">
           <button
-            disabled={isCreatingOrder || !agreements.all || !agreements.personalInfo || !agreements.terms || !agreements.marketing}
+            disabled={
+              isCreatingOrder ||
+              !agreements.personalInfo ||
+              !agreements.terms ||
+              !selectedAddress ||
+              !isOrderReady
+            }
             onClick={submitOder}
-            className="w-full  btn-primary"
+            className="w-full btn-primary"
           >
-            주문하기
+            {isCreatingOrder ? "주문 중..." : "주문하기"}
           </button>
           {/* {agreements.all ||
             agreements.personalInfo ||

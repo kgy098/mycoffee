@@ -258,7 +258,13 @@ const CollectionDetail = () => {
               />
             </svg>
           </button>
-          <OrderingComponent title={"주문하기"} />
+          <OrderingComponent
+            title={"주문하기"}
+            blendId={collectionDetail?.blend?.id}
+            blendName={collectionDetail?.blend?.name}
+            collectionId={collectionDetail?.id}
+            collectionName={collectionDetail?.collection_name}
+          />
         </div>
       </div>
 

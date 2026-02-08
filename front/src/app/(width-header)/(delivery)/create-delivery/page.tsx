@@ -2,8 +2,9 @@
 import ActionSheet from "@/components/ActionSheet";
 import { useRouter } from "next/navigation";
 import React, { useEffect, useState } from "react";
-import Link from "next/link";
 import { useHeaderStore } from "@/stores/header-store";
+import { usePost } from "@/hooks/useApi";
+import { useUserStore } from "@/stores/user-store";
 
 const EditDelivery = () => {
   const [recipient, setRecipient] = useState("");
@@ -18,6 +19,8 @@ const EditDelivery = () => {
 
   const router = useRouter();
   const { setHeader } = useHeaderStore();
+  const { user } = useUserStore();
+  const userId = user?.data?.user_id;
 
   useEffect(() => {
     setHeader({
@@ -25,6 +28,28 @@ const EditDelivery = () => {
       showBackButton: true,
     });
   }, []);
+
+  const isDisabled =
+    !recipient || !phoneNumber || !zipCode || !zipAddress || !addressFloor;
+
+  const { mutate: createAddress, isPending } = usePost("/api/delivery-addresses", {
+    onSuccess: () => {
+      setShowLogOutModal(true);
+    },
+  });
+
+  const handleSubmit = () => {
+    if (!userId || isDisabled) return;
+    createAddress({
+      user_id: userId,
+      recipient_name: recipient,
+      phone_number: phoneNumber,
+      postal_code: zipCode,
+      address_line1: zipAddress,
+      address_line2: addressFloor,
+      is_default: isDefaultDeliveryAddress,
+    });
+  };
 
   return (
     <>
@@ -114,10 +139,15 @@ const EditDelivery = () => {
         </div>
 
         <button
-          onClick={() => setShowLogOutModal(true)}
-          className="w-full h-12 font-bold mt-auto text-base leading-[24px] px-4 rounded-lg bg-linear-gradient text-white"
+          onClick={handleSubmit}
+          disabled={isDisabled || isPending}
+          className={`w-full h-12 font-bold mt-auto text-base leading-[24px] px-4 rounded-lg ${
+            isDisabled || isPending
+              ? "bg-[#E6E6E6] text-[#9CA3AF] cursor-not-allowed"
+              : "bg-linear-gradient text-white"
+          }`}
         >
-          완료
+          {isPending ? "저장 중..." : "완료"}
         </button>
       </div>
 
@@ -130,12 +160,12 @@ const EditDelivery = () => {
           <p className="mb-6 text-center text-base leading-[20px] font-bold">
             배송지가 등록되었습니다.
           </p>
-          <Link
-            href="/delivery-address-management"
-            className={`btn-primary text-center block `}
+          <button
+            onClick={() => router.push("/delivery-address-management")}
+            className={`btn-primary text-center block w-full`}
           >
             확인
-          </Link>
+          </button>
         </div>
       </ActionSheet>
     </>

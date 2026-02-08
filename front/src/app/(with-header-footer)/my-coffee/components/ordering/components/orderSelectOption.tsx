@@ -24,7 +24,7 @@ const OrderSelectOption: React.FC<OrderSelectOptionProps> = ({
   const [weight, setWeight] = useState<string>("");
   // const [photo, setPhoto] = useState<string>("");
 
-  const { order, setOrder } = useOrderStore();
+  const { order, setOrder, currentMeta } = useOrderStore();
   const { orderImage, setOrderImage } = useOrderImageStore();
   const actionSheetRef = useRef<ActionSheetRef>(null);
 
@@ -38,8 +38,12 @@ const OrderSelectOption: React.FC<OrderSelectOptionProps> = ({
         grindLevel,
         packaging,
         weight,
-        price: 36000,
+        price: currentMeta.price ?? 36000,
         quantity: 1,
+        blend_id: currentMeta.blend_id,
+        blend_name: currentMeta.blend_name,
+        collection_id: currentMeta.collection_id,
+        collection_name: currentMeta.collection_name,
       },
     ]);
     setOrderImage({ name: "" });

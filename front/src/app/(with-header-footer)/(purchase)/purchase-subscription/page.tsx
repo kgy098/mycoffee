@@ -1,10 +1,17 @@
 "use client";
-import React, { useState, useEffect } from "react";
+import React, { useMemo, useState, useEffect } from "react";
 import { ChevronUp, ChevronDown, ChevronRight, XIcon } from "lucide-react";
-import Link from "next/link";
 import { useHeaderStore } from "@/stores/header-store";
+import { useOrderStore } from "@/stores/order-store";
+import { useGet, usePost } from "@/hooks/useApi";
+import { useUserStore } from "@/stores/user-store";
+import { useRouter } from "next/navigation";
 const PurchaseSubscription = () => {
   const { setHeader } = useHeaderStore();
+  const { order, currentMeta, subscriptionInfo } = useOrderStore();
+  const { user } = useUserStore();
+  const userId = user?.data?.user_id;
+  const router = useRouter();
   const [quantity, setQuantity] = useState(1);
   const [pointUsage, setPointUsage] = useState(0);
   const [agreements, setAgreements] = useState({
@@ -30,6 +37,41 @@ const PurchaseSubscription = () => {
     });
   }, [setHeader]);
 
+  const { data: pointsBalance } = useGet<{ balance: number }>(
+    ["points-balance", userId],
+    "/api/points/balance",
+    { params: { user_id: userId } },
+    { enabled: !!userId }
+  );
+
+  const { data: defaultAddress } = useGet<any>(
+    ["default-delivery-address", userId],
+    "/api/delivery-addresses/default",
+    { params: { user_id: userId } },
+    { enabled: !!userId }
+  );
+
+  const { data: deliveryAddresses } = useGet<any[]>(
+    ["delivery-addresses", userId],
+    "/api/delivery-addresses",
+    { params: { user_id: userId } },
+    { enabled: !!userId }
+  );
+
+  const selectedAddress = useMemo(() => {
+    if (defaultAddress) return defaultAddress;
+    if (deliveryAddresses && deliveryAddresses.length > 0) return deliveryAddresses[0];
+    return null;
+  }, [defaultAddress, deliveryAddresses]);
+
+  const availablePoints = pointsBalance?.balance ?? 0;
+
+  const { mutate: createSubscription, isPending } = usePost("/api/subscriptions", {
+    onSuccess: (data: any) => {
+      router.push(`/success-order?subscriptionId=${data?.id ?? ""}`);
+    },
+  });
+
   const handleQuantityChange = (type: "increase" | "decrease") => {
     if (type === "increase") {
       setQuantity((prev) => prev + 1);
@@ -40,7 +82,8 @@ const PurchaseSubscription = () => {
 
   const handlePointUsage = (type: "all" | "custom") => {
     if (type === "all") {
-      setPointUsage(12000);
+      const maxUsablePoints = Math.min(availablePoints, totalProductPrice);
+      setPointUsage(maxUsablePoints);
     }
   };
 
@@ -69,9 +112,36 @@ const PurchaseSubscription = () => {
     }));
   };
 
-  const productPrice = 36000;
+  const productPrice = currentMeta.price ?? 36000;
   const deliveryFee = 0;
-  const totalPrice = productPrice * quantity - pointUsage + deliveryFee;
+  const totalProductPrice = productPrice * quantity;
+  const totalPrice = totalProductPrice - pointUsage + deliveryFee;
+
+  const handleSubmit = () => {
+    if (!userId || !selectedAddress || !currentMeta.blend_id) return;
+    if (!subscriptionInfo.total_cycles || !subscriptionInfo.first_delivery_date) return;
+    createSubscription({
+      user_id: userId,
+      blend_id: currentMeta.blend_id,
+      delivery_address_id: selectedAddress.id,
+      payment_method: "card",
+      total_amount: totalPrice,
+      quantity,
+      total_cycles: subscriptionInfo.total_cycles,
+      first_delivery_date: subscriptionInfo.first_delivery_date,
+      options: order[0]
+        ? {
+            caffeine: order[0].caffeineStrength,
+            grind: order[0].grindLevel,
+            package: order[0].packaging,
+            weight: order[0].weight,
+          }
+        : null,
+      points_used: pointUsage,
+      discount_amount: pointUsage,
+      delivery_fee: deliveryFee,
+    });
+  };
 
   return (
     <>
@@ -95,7 +165,7 @@ const PurchaseSubscription = () => {
               <div className="border border-border-default rounded-lg p-3 mt-4">
                 <div className="flex justify-between items-start mb-2">
                   <p className="font-bold text-xs leading-[18px] text-gray-0">
-                    나만의 커피 1호기/클래식 하모니 블랜드
+                    {currentMeta.collection_name || currentMeta.blend_name || "나만의 커피"}
                   </p>
                   <button>
                     <XIcon size={16} stroke="#1A1A1A" />
@@ -103,19 +173,23 @@ const PurchaseSubscription = () => {
                 </div>
 
                 <div className="text-sm text-text-secondary mb-4 flex items-center gap-1">
-                  {["카페인", "홀빈", "벌크", "500g", "라벨"].map(
-                    (item, idx) => (
-                      <span
-                        key={idx}
-                        className="text-[12px] leading-[16px] flex items-center gap-1"
-                      >
-                        {item}{" "}
-                        {idx !== 4 && (
-                          <span className="size-1 bg-[#9CA3AF] rounded-full inline-block"></span>
-                        )}
-                      </span>
-                    )
-                  )}
+                  {[
+                    order[0]?.caffeineStrength === "CAFFEINE" ? "카페인" : "디카페인",
+                    order[0]?.grindLevel === "WHOLE_BEAN" ? "홀빈" : "분쇄 그라인딩",
+                    order[0]?.packaging === "STICK" ? "스틱" : "벌크",
+                    order[0]?.weight || "중량 미선택",
+                    "라벨",
+                  ].map((item, idx) => (
+                    <span
+                      key={idx}
+                      className="text-[12px] leading-[16px] flex items-center gap-1"
+                    >
+                      {item}{" "}
+                      {idx !== 4 && (
+                        <span className="size-1 bg-[#9CA3AF] rounded-full inline-block"></span>
+                      )}
+                    </span>
+                  ))}
                 </div>
 
                 <div className="flex justify-between items-center">
@@ -148,7 +222,7 @@ const PurchaseSubscription = () => {
                     </button>
                   </div>
                   <div className="text-base font-bold leading-[24px]">
-                    {productPrice.toLocaleString()}원
+                    {totalProductPrice.toLocaleString()}원
                   </div>
                 </div>
               </div>
@@ -193,37 +267,46 @@ const PurchaseSubscription = () => {
           <div className="bg-white rounded-lg p-3 border border-border-default">
             <div className="flex items-center justify-between cursor-pointer">
               <h2 className="text-sm leading-[20px] font-bold">배송지 정보</h2>
-              <span className="text-[12px] leading-[16px] text-[#3182F6] font-bold">
+              <button
+                onClick={() => router.push("/delivery-address-management")}
+                className="text-[12px] leading-[16px] text-[#3182F6] font-bold"
+              >
                 변경
-              </span>
+              </button>
             </div>
 
-            <div className="flex items-start gap-3 mt-4">
-              <div className="w-8 h-8 bg-action-secondary rounded-full flex items-center justify-center flex-shrink-0">
-                <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 16 16" fill="none">
-                  <g clip-path="url(#clip0_2859_14531)">
-                    <path d="M10.0002 14.6664C9.82335 14.6664 9.65378 14.5962 9.52876 14.4712C9.40373 14.3462 9.3335 14.1766 9.3335 13.9998V11.3331C9.33348 11.2234 9.36055 11.1153 9.4123 11.0186C9.46405 10.9218 9.53889 10.8393 9.63016 10.7784L11.6302 9.44511C11.7397 9.37202 11.8685 9.33301 12.0002 9.33301C12.1319 9.33301 12.2606 9.37202 12.3702 9.44511L14.3702 10.7784C14.4614 10.8393 14.5363 10.9218 14.588 11.0186C14.6398 11.1153 14.6668 11.2234 14.6668 11.3331V13.9998C14.6668 14.1766 14.5966 14.3462 14.4716 14.4712C14.3465 14.5962 14.177 14.6664 14.0002 14.6664H10.0002Z" stroke="#62402D" strokeWidth="1.33333" strokeLinecap="round" strokeLinejoin="round" />
-                    <path d="M12.0002 6.66634C12.0002 5.25185 11.4383 3.8953 10.4381 2.89511C9.43787 1.89491 8.08132 1.33301 6.66683 1.33301C5.25234 1.33301 3.89579 1.89491 2.89559 2.89511C1.8954 3.8953 1.3335 5.25185 1.3335 6.66634C1.3335 9.99501 5.02616 13.4617 6.26616 14.5323C6.38174 14.619 6.52235 14.6658 6.66683 14.6657" stroke="#62402D" strokeWidth="1.33333" strokeLinecap="round" strokeLinejoin="round" />
-                    <path d="M12 14.667V12.667" stroke="#62402D" strokeWidth="1.33333" strokeLinecap="round" strokeLinejoin="round" />
-                    <path d="M6.6665 8.66699C7.77107 8.66699 8.6665 7.77156 8.6665 6.66699C8.6665 5.56242 7.77107 4.66699 6.6665 4.66699C5.56193 4.66699 4.6665 5.56242 4.6665 6.66699C4.6665 7.77156 5.56193 8.66699 6.6665 8.66699Z" stroke="#62402D" strokeWidth="1.33333" strokeLinecap="round" strokeLinejoin="round" />
-                  </g>
-                  <defs>
-                    <clipPath id="clip0_2859_14531">
-                      <rect width="16" height="16" fill="white" />
-                    </clipPath>
-                  </defs>
-                </svg>
-              </div>
+            {selectedAddress ? (
+              <div className="flex items-start gap-3 mt-4">
+                <div className="w-8 h-8 bg-action-secondary rounded-full flex items-center justify-center flex-shrink-0">
+                  <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 16 16" fill="none">
+                    <g clip-path="url(#clip0_2859_14531)">
+                      <path d="M10.0002 14.6664C9.82335 14.6664 9.65378 14.5962 9.52876 14.4712C9.40373 14.3462 9.3335 14.1766 9.3335 13.9998V11.3331C9.33348 11.2234 9.36055 11.1153 9.4123 11.0186C9.46405 10.9218 9.53889 10.8393 9.63016 10.7784L11.6302 9.44511C11.7397 9.37202 11.8685 9.33301 12.0002 9.33301C12.1319 9.33301 12.2606 9.37202 12.3702 9.44511L14.3702 10.7784C14.4614 10.8393 14.5363 10.9218 14.588 11.0186C14.6398 11.1153 14.6668 11.2234 14.6668 11.3331V13.9998C14.6668 14.1766 14.5966 14.3462 14.4716 14.4712C14.3465 14.5962 14.177 14.6664 14.0002 14.6664H10.0002Z" stroke="#62402D" strokeWidth="1.33333" strokeLinecap="round" strokeLinejoin="round" />
+                      <path d="M12.0002 6.66634C12.0002 5.25185 11.4383 3.8953 10.4381 2.89511C9.43787 1.89491 8.08132 1.33301 6.66683 1.33301C5.25234 1.33301 3.89579 1.89491 2.89559 2.89511C1.8954 3.8953 1.3335 5.25185 1.3335 6.66634C1.3335 9.99501 5.02616 13.4617 6.26616 14.5323C6.38174 14.619 6.52235 14.6658 6.66683 14.6657" stroke="#62402D" strokeWidth="1.33333" strokeLinecap="round" strokeLinejoin="round" />
+                      <path d="M12 14.667V12.667" stroke="#62402D" strokeWidth="1.33333" strokeLinecap="round" strokeLinejoin="round" />
+                      <path d="M6.6665 8.66699C7.77107 8.66699 8.6665 7.77156 8.6665 6.66699C8.6665 5.56242 7.77107 4.66699 6.6665 4.66699C5.56193 4.66699 4.6665 5.56242 4.6665 6.66699C4.6665 7.77156 5.56193 8.66699 6.6665 8.66699Z" stroke="#62402D" strokeWidth="1.33333" strokeLinecap="round" strokeLinejoin="round" />
+                    </g>
+                    <defs>
+                      <clipPath id="clip0_2859_14531">
+                        <rect width="16" height="16" fill="white" />
+                      </clipPath>
+                    </defs>
+                  </svg>
+                </div>
 
-              <div className="flex-1">
-                <p className="text-xs leading-[18px] font-bold">
-                  이기홍 01012341234
-                </p>
-                <p className="text-xs leading-[18px] font-bold">
-                  인천 부평구 길주남로123번길 12
-                </p>
+                <div className="flex-1">
+                  <p className="text-xs leading-[18px] font-bold">
+                    {selectedAddress.recipient_name} {selectedAddress.phone_number}
+                  </p>
+                  <p className="text-xs leading-[18px] font-bold">
+                    {selectedAddress.address_line1} {selectedAddress.address_line2 || ""}
+                  </p>
+                </div>
               </div>
-            </div>
+            ) : (
+              <p className="text-xs leading-[18px] text-text-secondary mt-4">
+                배송지를 등록해주세요.
+              </p>
+            )}
           </div>
 
           {/* 포인트 사용 (Point Usage) */}
@@ -243,13 +326,17 @@ const PurchaseSubscription = () => {
             {expandedSections.pointUsage && (
               <div className=" mt-2">
                 <span className="text-xs leading-[16px] font-bold">
-                  보유 포인트 12,000
+                  보유 포인트 {availablePoints.toLocaleString()}
                 </span>
                 <div className="flex items-center gap-2 mt-2">
                   <input
                     type="number"
                     value={pointUsage}
-                    onChange={(e) => setPointUsage(Number(e.target.value))}
+                    onChange={(e) => {
+                      const value = Number(e.target.value);
+                      const maxUsablePoints = Math.min(availablePoints, totalProductPrice);
+                      setPointUsage(Math.min(value, maxUsablePoints));
+                    }}
                     className="flex-1 h-10 pl-3 border border-border-default rounded-lg text-left text-xs placeholder:text-text-secondary focus:outline-none focus:ring-[#A45F37] focus:border-[#A45F37]"
                     placeholder="0"
                   />
@@ -312,7 +399,7 @@ const PurchaseSubscription = () => {
                     </span>
 
                     <span className="text-xs leading-[18px] font-bold">
-                      {(productPrice * quantity).toLocaleString()}원
+                      {totalProductPrice.toLocaleString()}원
                     </span>
                   </div>
                   <div className="flex justify-between">
@@ -393,23 +480,21 @@ const PurchaseSubscription = () => {
           </div>
         </div>
         <div className="pt-4 w-full ">
-          {agreements.all ||
-            agreements.personalInfo ||
-            agreements.terms ||
-            agreements.marketing ? (
-            <>
-              <Link
-                href={"/success-order"}
-                className="w-full inline-block text-center py-3 border border-transparent bg-linear-gradient text-white rounded-lg font-bold leading-[24px]"
-              >
-                주문하기
-              </Link>
-            </>
-          ) : (
-            <button className="w-full py-3 border border-transparent bg-action-disabled text-text-disabled rounded-lg font-bold leading-[24px] cursor-not-allowed">
-              주문하기
-            </button>
-          )}
+          <button
+            onClick={handleSubmit}
+            disabled={
+              isPending ||
+              !agreements.personalInfo ||
+              !agreements.terms ||
+              !selectedAddress ||
+              !currentMeta.blend_id ||
+              !subscriptionInfo.total_cycles ||
+              !subscriptionInfo.first_delivery_date
+            }
+            className="w-full btn-primary"
+          >
+            {isPending ? "주문 중..." : "주문하기"}
+          </button>
         </div>
       </div>
     </>

@@ -2,7 +2,8 @@ import ActionSheet from "@/components/ActionSheet";
 import React, { useState } from "react";
 import CalendarPage from "./coffeeCalendar";
 import { ArrowDown, ChevronDown } from "lucide-react";
-import Link from "next/link";
+import { useRouter } from "next/navigation";
+import { useOrderStore } from "@/stores/order-store";
 
 interface OrderSelectSubscriptionDeleviryDateProps {
   isOpen: boolean;
@@ -14,6 +15,8 @@ const OrderSelectSubscriptionDeleviryDate: React.FC<
 > = ({ isOpen, onClose }) => {
   const [quantity, setQuantity] = useState<number | null>(null);
   const [deliveryDate, setDeliveryDate] = useState<Date | null>(null);
+  const router = useRouter();
+  const { setSubscriptionInfo } = useOrderStore();
 
   return (
     <ActionSheet isOpen={isOpen} onClose={onClose} title="정기구독 배송일 선택">
@@ -41,12 +44,19 @@ const OrderSelectSubscriptionDeleviryDate: React.FC<
           setDeliveryDate={setDeliveryDate}
         />
 
-        <button disabled={!deliveryDate} className="w-full mt-6 btn-primary">
-          {deliveryDate ? (
-            <Link href="/purchase-subscription">결제하기</Link>
-          ) : (
-            "결제하기"
-          )}
+        <button
+          disabled={!deliveryDate || !quantity}
+          className="w-full mt-6 btn-primary"
+          onClick={() => {
+            if (!deliveryDate || !quantity) return;
+            setSubscriptionInfo({
+              total_cycles: quantity,
+              first_delivery_date: deliveryDate.toISOString(),
+            });
+            router.push("/purchase-subscription");
+          }}
+        >
+          결제하기
         </button>
       </div>
     </ActionSheet>

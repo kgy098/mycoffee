@@ -1,17 +1,27 @@
 "use client";
 import React from "react";
-import { useRouter } from "next/navigation";
+import { useRouter, useSearchParams } from "next/navigation";
 
 const SuccessFinish = () => {
   const router = useRouter();
+  const searchParams = useSearchParams();
+  const orderId = searchParams.get("orderId");
+  const subscriptionId = searchParams.get("subscriptionId");
 
   const handleMainHome = () => {
     router.push("/home");
   };
 
   const handleOrderDetails = () => {
-    // Navigate to order details page
-    console.log("View order details");
+    if (orderId) {
+      router.push(`/order-delivery/${orderId}`);
+      return;
+    }
+    if (subscriptionId) {
+      router.push(`/profile/manage-subscriptions/${subscriptionId}`);
+      return;
+    }
+    router.push("/profile/order-delivery");
   };
 
   return (

@@ -1,9 +1,10 @@
 "use client";
 import ActionSheet from "@/components/ActionSheet";
-import { useRouter } from "next/navigation";
-import React, { useEffect, useState } from "react";
+import { useRouter, useSearchParams } from "next/navigation";
+import React, { useEffect, useMemo, useState } from "react";
 import { useHeaderStore } from "@/stores/header-store";
-import Link from "next/link";
+import { useGet, usePut } from "@/hooks/useApi";
+import { useUserStore } from "@/stores/user-store";
 
 const EditDelivery = () => {
   const [recipient, setRecipient] = useState("");
@@ -17,16 +18,24 @@ const EditDelivery = () => {
   const [showLogOutModal, setShowLogOutModal] = useState(false);
 
   const router = useRouter();
+  const searchParams = useSearchParams();
+  const addressIdParam = searchParams.get("id");
+  const addressId = addressIdParam ? Number(addressIdParam) : null;
   const { setHeader } = useHeaderStore();
+  const { user } = useUserStore();
+  const userId = user?.data?.user_id;
 
-  // filling inputs with fake data
-  useEffect(() => { 
-    setRecipient("홍길동");
-    setPhoneNumber("01012341234");
-    setZipCode("12345");
-    setZipAddress("서울특별시 강남구 강남대로 1234");
-    setAddressFloor("101호"); 
-  }, []);
+  const { data: deliveryAddresses } = useGet<any[]>(
+    ["delivery-addresses", userId],
+    "/api/delivery-addresses",
+    { params: { user_id: userId } },
+    { enabled: !!userId }
+  );
+
+  const address = useMemo(() => {
+    if (!addressId || !deliveryAddresses) return null;
+    return deliveryAddresses.find((item) => item.id === addressId);
+  }, [deliveryAddresses, addressId]);
 
   useEffect(() => {
     setHeader({
@@ -35,8 +44,40 @@ const EditDelivery = () => {
     });
   }, []);
 
+  useEffect(() => {
+    if (!address) return;
+    setRecipient(address.recipient_name || "");
+    setPhoneNumber(address.phone_number || "");
+    setZipCode(address.postal_code || "");
+    setZipAddress(address.address_line1 || "");
+    setAddressFloor(address.address_line2 || "");
+    setIsDefaultDeliveryAddress(!!address.is_default);
+  }, [address]);
+
   const isDisabled =
     !recipient || !phoneNumber || !zipCode || !zipAddress || !addressFloor;
+
+  const { mutate: updateAddress, isPending } = usePut(
+    addressId ? `/api/delivery-addresses/${addressId}` : "/api/delivery-addresses",
+    {
+      onSuccess: () => {
+        setShowLogOutModal(true);
+      },
+    }
+  );
+
+  const handleSubmit = () => {
+    if (!userId || !addressId || isDisabled) return;
+    updateAddress({
+      user_id: userId,
+      recipient_name: recipient,
+      phone_number: phoneNumber,
+      postal_code: zipCode,
+      address_line1: zipAddress,
+      address_line2: addressFloor,
+      is_default: isDefaultDeliveryAddress,
+    });
+  };
 
   return (
     <>
@@ -126,15 +167,15 @@ const EditDelivery = () => {
         </div>
 
         <button
-          disabled={isDisabled}
-          onClick={() => setShowLogOutModal(true)}
+          disabled={isDisabled || isPending}
+          onClick={handleSubmit}
           className={`w-full h-12 font-bold mt-auto text-base leading-[24px] px-4 rounded-lg  ${
-            isDisabled
+            isDisabled || isPending
               ? "bg-[#E6E6E6] text-[#9CA3AF] cursor-not-allowed"
               : "bg-linear-gradient text-white"
           }`}
         >
-          완료
+          {isPending ? "저장 중..." : "완료"}
         </button>
       </div>
 
@@ -147,12 +188,12 @@ const EditDelivery = () => {
           <p className="mb-6 text-center text-base leading-[20px] font-bold">
             배송지가 등록되었습니다.
           </p>
-          <Link
-            href="/delivery-address-management"
-            className={`btn-primary text-center block `}
+          <button
+            onClick={() => router.push("/delivery-address-management")}
+            className={`btn-primary text-center block w-full`}
           >
             확인
-          </Link>
+          </button>
         </div>
       </ActionSheet>
     </>

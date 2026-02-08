@@ -112,9 +112,9 @@ const OrderDeliveryCard = ({ data }: { data: any }) => {
                 <div className="flex items-center justify-between gap-2">
                     <Link
                         href={
-                            (data?.status === "배송 완료" && data?.type === "단품") ?`/profile/write-review/1`
-                                : (data?.status === "배송 완료" && data?.type === "구독") ? `/profile/reviews/history`
-                                    : data?.type === '구독' ? `/profile/reviews/history` : `/profile/reviews/history`
+                            (data?.status === "배송 완료" && data?.type === "단품")
+                                ? `/profile/write-review/${data?.orderItemId || data?.id}`
+                                : `/profile/reviews/history`
                         }
                         className="btn-action text-center"
                     >

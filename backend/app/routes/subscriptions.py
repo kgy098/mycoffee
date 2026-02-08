@@ -27,6 +27,21 @@ class SubscriptionResponse(BaseModel):
     total_amount: Optional[float]
 
 
+class SubscriptionCreateRequest(BaseModel):
+    user_id: int
+    blend_id: int
+    delivery_address_id: Optional[int] = None
+    total_amount: Optional[float] = None
+    quantity: int = 1
+    total_cycles: int = 0
+    first_delivery_date: datetime
+    options: Optional[dict] = None
+    payment_method: Optional[str] = None
+    points_used: int = 0
+    discount_amount: Optional[float] = None
+    delivery_fee: Optional[float] = None
+
+
 class SubscriptionOrderResponse(BaseModel):
     order_id: int
     order_number: str
@@ -75,6 +90,34 @@ async def list_subscriptions(
             )
         )
     return results
+
+
+@router.post("/subscriptions", response_model=SubscriptionResponse)
+async def create_subscription(
+    payload: SubscriptionCreateRequest,
+    db: Session = Depends(get_db)
+):
+    start_date = payload.first_delivery_date.date()
+    next_billing_date = start_date - timedelta(days=2)
+
+    subscription = Subscription(
+        user_id=payload.user_id,
+        blend_id=payload.blend_id,
+        start_date=start_date,
+        next_billing_date=next_billing_date,
+        status="active",
+        payment_method=payload.payment_method,
+        total_amount=payload.total_amount,
+        delivery_address_id=payload.delivery_address_id,
+        options=payload.options,
+        quantity=payload.quantity,
+        total_cycles=payload.total_cycles,
+        current_cycle=1 if payload.total_cycles else 0,
+    )
+    db.add(subscription)
+    db.commit()
+    db.refresh(subscription)
+    return await get_subscription_detail(subscription.id, db)
 
 
 @router.get("/subscriptions/{subscription_id}", response_model=SubscriptionResponse)

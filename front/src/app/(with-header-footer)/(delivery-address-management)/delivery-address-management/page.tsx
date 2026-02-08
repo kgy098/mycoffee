@@ -26,7 +26,11 @@ const DeliveryAddressManagement = () => {
 
   const router = useRouter();
 
-  const navigateToEditDelivery = () => {
+  const navigateToEditDelivery = (addressId?: number | null) => {
+    if (addressId) {
+      router.push(`/edit-delivery?id=${addressId}`);
+      return;
+    }
     router.push("/edit-delivery");
   };
 
@@ -137,7 +141,7 @@ const DeliveryAddressManagement = () => {
       >
         <div>
           <button
-            onClick={navigateToEditDelivery}
+            onClick={() => navigateToEditDelivery(selectedAddressId)}
             className={`inline-block mb-2 text-center w-full mt-auto py-3 rounded-lg font-bold leading-[24px] bg-linear-gradient text-white`}
           >
             수정

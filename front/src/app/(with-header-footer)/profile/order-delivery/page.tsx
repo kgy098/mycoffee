@@ -40,6 +40,7 @@ const OrderDelivery = () => {
 
             return {
                 id: order.id,
+                orderItemId: firstItem?.id,
                 date: order.created_at ? new Date(order.created_at).toLocaleDateString("ko-KR") : "",
                 orderNumber: order.order_number,
                 type: order.order_type === "subscription" ? "구독" : "단품",
@@ -79,7 +80,9 @@ const OrderDelivery = () => {
             />
             <div className="space-y-4 px-4">
                 {filteredData.map((order) => (
-                    <OrderDeliveryCard key={order.id} data={order} />
+                    <div key={order.id}>
+                        <OrderDeliveryCard data={order} />
+                    </div>
                 ))}
             </div>
         </div>
