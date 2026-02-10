@@ -1,6 +1,6 @@
 'use client';
 
-import { useEffect, Suspense } from 'react';
+import { useEffect, useState, Suspense } from 'react';
 import { useSearchParams, useRouter } from 'next/navigation'; 
 import Image from 'next/image';
 import MainBanner from '@/components/MainBanner';
@@ -9,11 +9,13 @@ import TodaysCoffeePick from '@/components/TodaysCoffeePick';
 import UserReviews from '@/components/UserReviews';
 import CoffeeStories from '@/components/CoffeeStories';
 import Footer from '@/components/Footer';
+import LoginRequiredAlert from '@/components/LoginRequiredAlert';
 import { setAccessTokenCookie } from '@/utils/cookies';
 
 function HomePageContent() {
     const searchParams = useSearchParams();
     const router = useRouter();
+    const [showLoginAlert, setShowLoginAlert] = useState(false);
 
     useEffect(() => {
         if (typeof window !== 'undefined') {
@@ -43,8 +45,8 @@ function HomePageContent() {
 
             {/* Main Content */}
             <div className='bg-background'>
-                {/* Main Banner */}
-                <MainBanner />
+                {/* Main Banner - 메인 취향분석: 비로그인 시 로그인 필요 알럿 */}
+                <MainBanner onRequireLogin={() => setShowLoginAlert(true)} />
 
                 {/* My Coffee Summary */}
                 <MyCoffeeSummary />
@@ -58,6 +60,9 @@ function HomePageContent() {
                 {/* Footer */}
                 <Footer />
             </div>
+
+            {/* 로그인 필요 알럿 (화면 하단) */}
+            <LoginRequiredAlert isOpen={showLoginAlert} onClose={() => setShowLoginAlert(false)} />
         </div>
     );
 }

@@ -18,7 +18,12 @@ interface CoffeePick {
     hashtags: string[];
 }
 
-const MainBanner = () => {
+interface MainBannerProps {
+    /** 비로그인 시 취향분석 버튼 클릭 시 호출 (로그인 필요 알럿 띄우기) */
+    onRequireLogin?: () => void;
+}
+
+const MainBanner = ({ onRequireLogin }: MainBannerProps) => {
     const [currentSlide, setCurrentSlide] = useState(0);
     const { user } = useUserStore();
 
@@ -97,17 +102,30 @@ const MainBanner = () => {
                 </div>
             </Swiper>
 
-            {/* CTA Button - Swiper tashqarisida */}
+            {/* CTA Button - 메인 취향분석: 로그인 시 내 커피로, 비로그인 시 로그인 필요 알럿 */}
             <div className="mt-3 px-4">
-                <Link 
-                    href={user.isAuthenticated ? "/my-coffee/taste-analysis" : "/analysis"} 
-                    className="btn-primary w-full text-center flex items-center justify-between !text-base !p-3 !pl-5"
-                >
-                    <span>지금 내 커피 취향을 찾아보세요!</span>
-                    <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 16 16" fill="none">
-                        <path d="M6 12L10 8L6 4" stroke="white" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" />
-                    </svg>
-                </Link>
+                {user.isAuthenticated ? (
+                    <Link
+                        href="/my-coffee/taste-analysis"
+                        className="btn-primary w-full text-center flex items-center justify-between !text-base !p-3 !pl-5"
+                    >
+                        <span>지금 내 커피 취향을 찾아보세요!</span>
+                        <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 16 16" fill="none">
+                            <path d="M6 12L10 8L6 4" stroke="white" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" />
+                        </svg>
+                    </Link>
+                ) : (
+                    <button
+                        type="button"
+                        onClick={() => onRequireLogin?.()}
+                        className="btn-primary w-full text-center flex items-center justify-between !text-base !p-3 !pl-5"
+                    >
+                        <span>지금 내 커피 취향을 찾아보세요!</span>
+                        <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 16 16" fill="none">
+                            <path d="M6 12L10 8L6 4" stroke="white" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" />
+                        </svg>
+                    </button>
+                )}
             </div>
         </div>
     );
