@@ -12,6 +12,8 @@ import { useGet, usePost } from "@/hooks/useApi";
 import { useUserStore } from "@/stores/user-store";
 import SpiderChart from "@/app/(content-only)/analysis/SpiderChart";
 import OtherCoffeeSlider from "@/components/OtherCoffeeSlider";
+import TasteDetails from "./components/TasteDetails";
+import type { ScoreScaleItem } from "@/app/(content-only)/result/page";
 
 interface AnalysisResultDetail {
     id: number;
@@ -95,6 +97,25 @@ const CoffeeAnalysisDetail = () => {
         { params: { limit: 5 } },
         { enabled: canFetch }
     );
+
+    const { data: scoreScales } = useGet<ScoreScaleItem[]>(
+        ["score-scales"],
+        "/api/score-scales"
+    );
+
+    const { descriptionByKeyScore, labelByKey } = useMemo(() => {
+        const desc: Record<string, string> = {};
+        const labels: Record<string, string> = {};
+        if (!scoreScales?.length) return { descriptionByKeyScore: desc, labelByKey: labels };
+        for (const row of scoreScales) {
+            const key = `${row.attribute_key}_${row.score}`;
+            if (row.description) desc[key] = row.description;
+            if (row.attribute_label && !labels[row.attribute_key]) {
+                labels[row.attribute_key] = row.attribute_label;
+            }
+        }
+        return { descriptionByKeyScore: desc, labelByKey: labels };
+    }, [scoreScales]);
 
     useEffect(() => {
         if (analysisDetail?.taste_profile) {
@@ -230,8 +251,12 @@ const CoffeeAnalysisDetail = () => {
                                                     </p>
                                                 </div>
 
-                                                {/* Taste Details */}
-                                                {/* <TasteDetails ratings={tasteRatings} /> */}
+                                                {/* 취향 항목별 설명 (score_scales) */}
+                                                <TasteDetails
+                                                    ratings={tasteRatings}
+                                                    descriptionByKeyScore={descriptionByKeyScore}
+                                                    labelByKey={labelByKey}
+                                                />
                                             </div>
                                         ) : item.id === 1 ? (
                                             <div>
