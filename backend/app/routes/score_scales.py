@@ -10,7 +10,8 @@ router = APIRouter()
 
 @router.get("/", response_model=list[ScoreScaleResponse])
 async def list_scales(db: Session = Depends(get_db)):
-    scales = db.query(ScoreScale).order_by(ScoreScale.id).all()
+    """전체 취향 항목·점수별 문구 목록 (attribute_key, score 순)"""
+    scales = db.query(ScoreScale).order_by(ScoreScale.attribute_key, ScoreScale.score).all()
     return scales
 
 

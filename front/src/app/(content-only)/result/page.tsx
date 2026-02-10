@@ -57,39 +57,48 @@ export default function ResultPage() {
   };
 
   return (
-    <div className="min-h-[100dvh] bg-[#1a1a1a] flex flex-col">
+    <div className="min-h-[100dvh] bg-white flex flex-col">
       <div className="flex-1 px-4 pt-6 pb-8">
-        {/* Radar chart (dark theme overrides for labels/grid) */}
-        <div className="result-chart-dark flex justify-center mb-8">
+        {/* 추천 블렌드 (화면설계 [01-02] 기준) */}
+        <div className="mb-6">
+          <h1 className="text-lg font-bold text-text-primary mb-0.5">
+            벨벳 터치 블렌드
+          </h1>
+          <p className="text-xs text-text-secondary mb-1">
+            (케냐 51% 코스타리카 49%)
+          </p>
+          <p className="text-sm text-text-secondary leading-relaxed">
+            깔끔한 마무리와 산뜻한 입안 감촉이 좋은 커피입니다.
+          </p>
+        </div>
+
+        {/* 레이더 차트 */}
+        <div className="flex justify-center mb-8">
           <SpiderChart
             ratings={safePrefs}
             setRatings={() => {}}
             isChangable={false}
             isClickable={false}
             size="large"
-            wrapperClassName="[&_svg]:drop-shadow-[0_0_24px_rgba(255,121,39,0.25)]"
           />
         </div>
 
-        {/* Attribute list */}
-        <ul className="space-y-4 mb-10">
+        {/* 항목별 한 줄: 향 + 별점 + 문구 */}
+        <ul className="space-y-3 mb-10">
           {ATTRIBUTES.map(({ key, label, description }) => (
-            <li key={key} className="text-white">
-              <div className="flex items-center gap-2 mb-1">
-                <span className="text-sm font-medium text-white/90">{label}</span>
-                <span className="text-text-secondary text-xs">({safePrefs[key]})</span>
-              </div>
-              <div className="flex items-center gap-2 mb-0.5">
-                <StarRating score={safePrefs[key]} />
-              </div>
-              <p className="text-xs text-white/70 leading-relaxed">{description}</p>
+            <li key={key} className="text-text-primary text-sm leading-relaxed">
+              <span className="font-medium">{label}</span>
+              {' '}
+              <StarRating score={safePrefs[key]} />
+              {' '}
+              <span className="text-text-secondary">{description}</span>
             </li>
           ))}
         </ul>
 
         {/* CTA */}
         <div className="space-y-3">
-          <p className="text-center text-white text-sm font-medium leading-relaxed">
+          <p className="text-center text-text-primary text-sm font-medium leading-relaxed">
             나만의 맞춤 커피 추천, 지금 회원가입하고 시작하세요!
           </p>
           <Link
@@ -100,7 +109,7 @@ export default function ResultPage() {
           </Link>
           <Link
             href="/home"
-            className="block w-full text-center text-sm text-white/70 underline underline-offset-2 py-2"
+            className="block w-full text-center text-sm text-text-secondary underline underline-offset-2 py-2"
           >
             둘러보고 나중에 할래요.
           </Link>

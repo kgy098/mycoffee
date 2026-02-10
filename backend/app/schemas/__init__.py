@@ -125,13 +125,19 @@ class TasteHistoryResponse(BaseModel):
 
 # Score Scale Schemas
 class ScoreScaleCreate(BaseModel):
-    label: Optional[str] = None
+    """취향 항목별 점수 문구 생성"""
+    attribute_key: str
+    attribute_label: Optional[str] = None
+    score: int
     description: Optional[str] = None
 
 
 class ScoreScaleResponse(BaseModel):
+    """취향 항목별 점수 문구 응답"""
     id: int
-    label: Optional[str]
+    attribute_key: str
+    attribute_label: Optional[str]
+    score: int
     description: Optional[str]
 
     class Config:
