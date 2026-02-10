@@ -3,10 +3,8 @@
 import { useState, useCallback } from 'react';
 import Image from 'next/image';
 import { useRouter } from 'next/navigation';
-import { useQryMutation } from '@/hooks/useApi';
 import { useRecommendationStore } from '@/stores/recommendation-store';
 import SpiderChart from './SpiderChart';
-import { api } from '@/lib/api';
 
 export default function AnalysisPage() {
 
@@ -20,29 +18,11 @@ export default function AnalysisPage() {
   });
   const { setPreferences } = useRecommendationStore();
 
-  const { mutate: saveTasteHistory, isPending: isSavingTasteHistory } = useQryMutation<any, any>({
-    mutationFn: async (data) => {
-      const response = await api.post("/api/taste-histories/", data);
-      return response.data;
-    },
-    options: {
-      onSuccess: () => {
-        setPreferences(ratings);
-        router.push('/result');
-      },
-    },
-  });
-
+  /** 결과 페이지로 이동. analysis_results 저장은 /result에서 POST /api/recommendation (save_analysis:1)로 한 번만 수행 (blend_id, score 포함) */
   const handleSubmitAnalysis = useCallback(() => {
-    saveTasteHistory({
-      acidity: ratings.acidity,
-      sweetness: ratings.sweetness,
-      body: ratings.body,
-      nuttiness: ratings.nutty,
-      bitterness: ratings.aroma,
-      anonymous_id: `session_${Date.now()}`,
-    });
-  }, [ratings, saveTasteHistory]);
+    setPreferences(ratings);
+    router.push('/result');
+  }, [ratings, setPreferences, router]);
 
   return (
     <>
@@ -71,10 +51,9 @@ export default function AnalysisPage() {
         </div>
         <button
           onClick={handleSubmitAnalysis}
-          disabled={isSavingTasteHistory}
-          className="btn-primary w-full text-center block disabled:opacity-50 disabled:cursor-not-allowed"
+          className="btn-primary w-full text-center block"
         >
-          {isSavingTasteHistory ? '취향 저장 중...' : '취향 분석 시작'}
+          취향 분석 시작
         </button>
       </div>
     </>

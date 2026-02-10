@@ -5,6 +5,7 @@ import { useRouter } from 'next/navigation';
 import Link from 'next/link';
 import { useQuery } from '@tanstack/react-query';
 import { useRecommendationStore } from '@/stores/recommendation-store';
+import { useUserStore } from '@/stores/user-store';
 import { useGet } from '@/hooks/useApi';
 import { api } from '@/lib/api';
 import SpiderChart from '../analysis/SpiderChart';
@@ -48,6 +49,7 @@ function StarRating({ score }: { score: number }) {
 export default function ResultPage() {
   const router = useRouter();
   const { preferences } = useRecommendationStore();
+  const { user } = useUserStore();
   const { data: scoreScales, isLoading: isLoadingScales } = useGet<ScoreScaleItem[]>(
     ['score-scales'],
     '/api/score-scales'
@@ -77,8 +79,8 @@ export default function ResultPage() {
         sweetness: safePrefs.sweetness,
         nutty: safePrefs.nutty,
         body: safePrefs.body,
-        user_id: 0,
-        save_analysis: 0,
+        user_id: user.isAuthenticated ? user.data.user_id : null,
+        save_analysis: 1, // analysis_results에 blend_id, score 저장
       });
       return data;
     },
