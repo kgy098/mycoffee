@@ -1,23 +1,40 @@
 'use client';
 
-import { useEffect } from 'react';
+import { useEffect, useMemo } from 'react';
 import { useRouter } from 'next/navigation';
 import Link from 'next/link';
+import { useQuery } from '@tanstack/react-query';
 import { useRecommendationStore } from '@/stores/recommendation-store';
+import { useGet } from '@/hooks/useApi';
+import { api } from '@/lib/api';
 import SpiderChart from '../analysis/SpiderChart';
 import { CoffeePreferences } from '@/types/coffee';
 
-const ATTRIBUTES: Array<{
-  key: keyof CoffeePreferences;
-  label: string;
-  description: string;
-}> = [
-  { key: 'aroma', label: '향', description: '풍부하고 매혹적인 향이 인상적입니다.' },
-  { key: 'acidity', label: '산미', description: '상큼한 산미가 또렷하게 느껴집니다.' },
-  { key: 'sweetness', label: '단맛', description: '입안 가득 자연스러운 단맛이 감돕니다.' },
-  { key: 'nutty', label: '고소함', description: '볶은 견과류 같은 깊은 고소함이 강조됩니다.' },
-  { key: 'body', label: '바디', description: '적당한 농도와 무게감이 있습니다.' },
-];
+/** 추천 API 응답 블렌드 */
+type BlendRecommendation = {
+  id: number;
+  name: string;
+  summary: string | null;
+  similarity_score: number;
+};
+/** 추천 API 전체 응답 */
+type RecommendationResponse = {
+  recommendations: BlendRecommendation[];
+};
+/** 블렌드 원산지 API 응답 */
+type BlendOriginItem = { origin: string; pct: number };
+
+/** API 응답: 취향 항목별 점수·문구 */
+export type ScoreScaleItem = {
+  id: number;
+  attribute_key: string;
+  attribute_label: string | null;
+  score: number;
+  description: string | null;
+};
+
+/** 결과 화면 표시 순서 (DB attribute_key) */
+const ATTRIBUTE_KEYS: (keyof CoffeePreferences)[] = ['aroma', 'acidity', 'sweetness', 'nutty', 'body'];
 
 function StarRating({ score }: { score: number }) {
   const full = Math.min(5, Math.max(0, Math.round(score)));
@@ -31,22 +48,16 @@ function StarRating({ score }: { score: number }) {
 export default function ResultPage() {
   const router = useRouter();
   const { preferences } = useRecommendationStore();
+  const { data: scoreScales, isLoading: isLoadingScales } = useGet<ScoreScaleItem[]>(
+    ['score-scales'],
+    '/api/score-scales'
+  );
 
   const hasPreferences = !!(
     preferences &&
     typeof preferences.aroma === 'number' &&
     typeof preferences.body === 'number'
   );
-
-  useEffect(() => {
-    if (!hasPreferences) {
-      router.replace('/analysis');
-    }
-  }, [hasPreferences, router]);
-
-  if (!hasPreferences) {
-    return null;
-  }
 
   const safePrefs = preferences ?? {
     aroma: 1,
@@ -56,20 +67,99 @@ export default function ResultPage() {
     body: 1,
   };
 
+  /** 사용자 취향 → blends 근사값 추천 (POST /api/recommendation) */
+  const { data: recommendationData } = useQuery({
+    queryKey: ['recommendation', safePrefs.aroma, safePrefs.acidity, safePrefs.sweetness, safePrefs.nutty, safePrefs.body],
+    queryFn: async (): Promise<RecommendationResponse> => {
+      const { data } = await api.post<RecommendationResponse>('/api/recommendation', {
+        aroma: safePrefs.aroma,
+        acidity: safePrefs.acidity,
+        sweetness: safePrefs.sweetness,
+        nutty: safePrefs.nutty,
+        body: safePrefs.body,
+        user_id: 0,
+        save_analysis: 0,
+      });
+      return data;
+    },
+    enabled: hasPreferences,
+  });
+
+  const topBlend = recommendationData?.recommendations?.[0];
+
+  /** 추천 1등 블렌드의 원산지 배합 (blend_origins) */
+  const { data: originsData } = useGet<BlendOriginItem[]>(
+    ['blend-origins', topBlend?.id ?? 0],
+    `/api/blends/${topBlend?.id ?? 0}/origins`,
+    undefined,
+    { enabled: !!topBlend?.id }
+  );
+
+  /** 배합 문구 예: "케냐 51% 코스타리카 49%" */
+  const originsText = useMemo(() => {
+    if (!originsData?.length) return null;
+    return originsData.map((o) => `${o.origin} ${o.pct}%`).join(' ');
+  }, [originsData]);
+
+  useEffect(() => {
+    if (!hasPreferences) {
+      router.replace('/analysis');
+    }
+  }, [hasPreferences, router]);
+
+  /** (attribute_key, score) → description */
+  const descriptionMap = useMemo(() => {
+    const map = new Map<string, string>();
+    if (!scoreScales?.length) return map;
+    for (const row of scoreScales) {
+      const key = `${row.attribute_key}_${row.score}`;
+      if (row.description) map.set(key, row.description);
+    }
+    return map;
+  }, [scoreScales]);
+
+  /** attribute_key → 표시명 (attribute_label) */
+  const labelMap = useMemo(() => {
+    const map = new Map<string, string>();
+    if (!scoreScales?.length) return map;
+    for (const row of scoreScales) {
+      if (!map.has(row.attribute_key) && row.attribute_label) {
+        map.set(row.attribute_key, row.attribute_label);
+      }
+    }
+    return map;
+  }, [scoreScales]);
+
+  if (!hasPreferences) {
+    return null;
+  }
+
+  const fallbackLabels: Record<string, string> = {
+    aroma: '향',
+    acidity: '산미',
+    sweetness: '단맛',
+    nutty: '고소함',
+    body: '바디',
+  };
+
   return (
     <div className="min-h-[100dvh] bg-white flex flex-col">
       <div className="flex-1 px-4 pt-6 pb-8">
-        {/* 추천 블렌드 (화면설계 [01-02] 기준) */}
-        <div className="mb-6">
+        {/* 추천 블렌드: blends 근사값 1등 + 배합·문구 (중앙 정렬) */}
+        <div className="mb-6 text-center">
           <h1 className="text-lg font-bold text-text-primary mb-0.5">
-            벨벳 터치 블렌드
+            {topBlend?.name ?? '—'}
           </h1>
-          <p className="text-xs text-text-secondary mb-1">
-            (케냐 51% 코스타리카 49%)
-          </p>
-          <p className="text-sm text-text-secondary leading-relaxed">
-            깔끔한 마무리와 산뜻한 입안 감촉이 좋은 커피입니다.
-          </p>
+          {originsText && (
+            <p className="text-xs text-text-secondary mb-1">
+              ({originsText})
+            </p>
+          )}
+          {topBlend?.summary && (
+            <p className="text-sm text-text-secondary leading-relaxed">
+              {topBlend.summary}
+            </p>
+          )}
         </div>
 
         {/* 레이더 차트 */}
@@ -83,17 +173,26 @@ export default function ResultPage() {
           />
         </div>
 
-        {/* 항목별 한 줄: 향 + 별점 + 문구 */}
+        {/* 항목별 한 줄: 향 + 별점 + 문구 (DB score_scales 연동) */}
         <ul className="space-y-3 mb-10">
-          {ATTRIBUTES.map(({ key, label, description }) => (
-            <li key={key} className="text-text-primary text-sm leading-relaxed">
-              <span className="font-medium">{label}</span>
-              {' '}
-              <StarRating score={safePrefs[key]} />
-              {' '}
-              <span className="text-text-secondary">{description}</span>
-            </li>
-          ))}
+          {ATTRIBUTE_KEYS.map((key) => {
+            const score = safePrefs[key];
+            const label = labelMap.get(key) ?? fallbackLabels[key] ?? key;
+            const description =
+              descriptionMap.get(`${key}_${score}`) ??
+              (isLoadingScales ? '…' : '');
+            return (
+              <li key={key} className="text-text-primary text-sm leading-relaxed">
+                <span className="font-medium">{label}</span>
+                {' '}
+                <StarRating score={score} />
+                {' '}
+                {description && (
+                  <span className="text-text-secondary">{description}</span>
+                )}
+              </li>
+            );
+          })}
         </ul>
 
         {/* CTA */}
