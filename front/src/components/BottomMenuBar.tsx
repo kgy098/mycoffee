@@ -3,6 +3,8 @@
 import Link from 'next/link';
 import { usePathname } from 'next/navigation';
 import { useState } from 'react';
+import { useUserStore } from '@/stores/user-store';
+import LoginRequiredAlert from '@/components/LoginRequiredAlert';
 import './BottomMenuBar.css';
 
 const homeIcon = (fill: string = '#B3B3B3') => <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none">
@@ -46,6 +48,9 @@ const profileIcon = (fill: string = '#B3B3B3') => <svg xmlns="http://www.w3.org/
 const BottomMenuBar = () => {
     const pathname = usePathname();
     const [bouncingItem, setBouncingItem] = useState<string | null>(null);
+    const [showLoginAlert, setShowLoginAlert] = useState(false);
+    const { user } = useUserStore();
+    const isLoggedIn = user?.isAuthenticated ?? false;
 
     // URL'larda boxShadow bo'lmasligi kerak
     const shouldShowShadow = !(
@@ -65,17 +70,24 @@ const BottomMenuBar = () => {
     };
 
     const handleItemClick = (itemName: string) => {
-        // Clear any existing animation first
         setBouncingItem(null);
-
-        // Use requestAnimationFrame to ensure the state is cleared before setting new animation
         requestAnimationFrame(() => {
             setBouncingItem(itemName);
-            setTimeout(() => {
-                setBouncingItem(null);
-            }, 800); // Match animation duration (0.8s)
+            setTimeout(() => setBouncingItem(null), 800);
         });
     };
+
+    /** 비로그인 시 로그인 필요 알럿 띄우기 (홈 제외 4개 메뉴) */
+    const handleNavClick = (e: React.MouseEvent, itemName: string, href: string) => {
+        if (!isLoggedIn) {
+            e.preventDefault();
+            setShowLoginAlert(true);
+        }
+        handleItemClick(itemName);
+    };
+
+    const navButtonClass = (itemName: string, path: string) =>
+        `navbar-menu-item w-[50%] text-center flex flex-col items-center cursor-pointer ${isActive(path) ? 'active' : ''} ${bouncingItem === itemName ? 'bounce' : ''}`;
 
     return (
         <div className={`mt-auto navbar-menu h-[91px]`}>
@@ -93,21 +105,33 @@ const BottomMenuBar = () => {
                                 <span className={`navbar-menu-text font-normal !text-[12px] leading-[16px] mt-1 text-[#6E6E6E]`}>홈</span>
                             </Link>
 
-                            {/* edit */}
-                            <Link
-                                href="/review-main"
-                                onClick={() => handleItemClick('review')}
-                                className={`navbar-menu-item w-[50%] text-center flex flex-col items-center cursor-pointer ${isActive('/review-main') ? 'active' : ''} ${bouncingItem === 'review' ? 'bounce' : ''}`}
-                            >
-                                {editIcon(isActive('/review-main') ? "#4E2A18" : "#B3B3B3")}
-                                <span className={`navbar-menu-text font-normal !text-[12px] leading-[16px] mt-1 text-[#6E6E6E]`}>리뷰</span>
-                            </Link>
+                            {/* 리뷰 - 비로그인 시 로그인 알럿 */}
+                            {isLoggedIn ? (
+                                <Link
+                                    href="/review-main"
+                                    onClick={() => handleItemClick('review')}
+                                    className={navButtonClass('review', '/review-main')}
+                                >
+                                    {editIcon(isActive('/review-main') ? "#4E2A18" : "#B3B3B3")}
+                                    <span className="navbar-menu-text font-normal !text-[12px] leading-[16px] mt-1 text-[#6E6E6E]">리뷰</span>
+                                </Link>
+                            ) : (
+                                <button
+                                    type="button"
+                                    onClick={(e) => handleNavClick(e, 'review', '/review-main')}
+                                    className={navButtonClass('review', '/review-main')}
+                                >
+                                    {editIcon(isActive('/review-main') ? "#4E2A18" : "#B3B3B3")}
+                                    <span className="navbar-menu-text font-normal !text-[12px] leading-[16px] mt-1 text-[#6E6E6E]">리뷰</span>
+                                </button>
+                            )}
                         </div>
-                        <Link
-                            href="/my-coffee"
-                            onClick={() => handleItemClick('my-coffee')}
-                            className={`w-[80px] text-center flex-shrink-0 flex-col items-center justify-center gap-3 rounded-full ${bouncingItem === 'my-coffee' ? 'bounce' : ''}`}
-                        >
+                        {isLoggedIn ? (
+                            <Link
+                                href="/my-coffee"
+                                onClick={() => handleItemClick('my-coffee')}
+                                className={`w-[80px] text-center flex-shrink-0 flex-col items-center justify-center gap-3 rounded-full ${bouncingItem === 'my-coffee' ? 'bounce' : ''}`}
+                            >
                             <div className="navbar-menu-main-item mx-auto mb-[5px] cursor-pointer flex items-center justify-center bg-action-primary rounded-full w-[44px] h-[44px]" style={{ boxShadow: "0 4px 12px 0 rgba(78,42,24,0.50)" }}>
                                 <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 20 20" fill="none">
                                     <path d="M7.76676 4.17931C7.62154 3.85314 7.49595 3.35045 8.15139 3.0473C8.72441 2.77869 9.53293 2.69043 10.3807 2.69043C11.4561 2.70194 12.555 2.9552 13.6147 3.43103C14.6744 3.90686 15.6753 4.59758 16.5583 5.46097C17.4414 6.32437 18.1911 7.34893 18.7641 8.47327C19.3371 9.5976 19.7217 10.7987 19.8944 12.0074C20.0671 13.2162 20.0279 14.4134 19.7767 15.5263C19.5255 16.6391 19.0427 17.5984 18.4305 18.4963C18.0929 18.9453 17.7044 19.3482 17.2766 19.6897C16.6486 20.1924 15.8676 20.1003 15.4672 19.2983L11.7033 11.9077L7.76676 4.17931Z" fill="white" />
@@ -115,31 +139,54 @@ const BottomMenuBar = () => {
                                 </svg>
                             </div>
                             <span className="!text-[12px] leading-[18px] inline-block">내 커피</span>
-                        </Link>
+                            </Link>
+                        ) : (
+                            <button
+                                type="button"
+                                onClick={(e) => handleNavClick(e, 'my-coffee', '/my-coffee')}
+                                className={`w-[80px] text-center flex-shrink-0 flex-col items-center justify-center gap-3 rounded-full ${bouncingItem === 'my-coffee' ? 'bounce' : ''}`}
+                            >
+                                <div className="navbar-menu-main-item mx-auto mb-[5px] cursor-pointer flex items-center justify-center bg-action-primary rounded-full w-[44px] h-[44px]" style={{ boxShadow: "0 4px 12px 0 rgba(78,42,24,0.50)" }}>
+                                    <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 20 20" fill="none">
+                                        <path d="M7.76676 4.17931C7.62154 3.85314 7.49595 3.35045 8.15139 3.0473C8.72441 2.77869 9.53293 2.69043 10.3807 2.69043C11.4561 2.70194 12.555 2.9552 13.6147 3.43103C14.6744 3.90686 15.6753 4.59758 16.5583 5.46097C17.4414 6.32437 18.1911 7.34893 18.7641 8.47327C19.3371 9.5976 19.7217 10.7987 19.8944 12.0074C20.0671 13.2162 20.0279 14.4134 19.7767 15.5263C19.5255 16.6391 19.0427 17.5984 18.4305 18.4963C18.0929 18.9453 17.7044 19.3482 17.2766 19.6897C16.6486 20.1924 15.8676 20.1003 15.4672 19.2983L11.7033 11.9077L7.76676 4.17931Z" fill="white" />
+                                        <path d="M12.3156 16.0711C12.504 16.4434 12.5393 16.735 11.9388 17.0266C11.2442 17.3605 10.4278 17.4027 9.61928 17.395C8.54388 17.3835 7.44493 17.1302 6.38523 16.6544C5.32553 16.1786 4.32471 15.4879 3.44162 14.6245C2.55854 13.7611 1.8089 12.7365 1.23588 11.6122C0.662857 10.4878 0.278226 9.28676 0.105534 8.07801C-0.0671579 6.86925 -0.0279098 5.67201 0.223278 4.55919C0.474466 3.44637 0.929744 2.43715 1.56949 1.58911C1.94235 1.09409 2.37015 0.660474 2.84898 0.295929C3.41808 -0.137688 4.07744 -0.153037 4.45815 0.645125L8.29269 8.17778L12.3117 16.075L12.3156 16.0711Z" fill="white" />
+                                    </svg>
+                                </div>
+                                <span className="!text-[12px] leading-[18px] inline-block">내 커피</span>
+                            </button>
+                        )}
                         <div className='flex items-center w-[calc((100%-80px)/2)]'>
-                            {/* globus */}
-                            <Link
-                                href="/community"
-                                onClick={() => handleItemClick('community')}
-                                className={`navbar-menu-item w-[50%] text-center flex flex-col items-center cursor-pointer ${isActive('/community') ? 'active' : ''} ${bouncingItem === 'community' ? 'bounce' : ''}`}
-                            >
-                                {globalIcon(isActive('/community') ? "#4E2A18" : "#B3B3B3")}
-                                <span className={`navbar-menu-text font-normal !text-[12px] leading-[16px] mt-1 text-[#6E6E6E] text-nowrap`}>커뮤니티</span>
-                            </Link>
+                            {/* 커뮤니티 - 비로그인 시 로그인 알럿 */}
+                            {isLoggedIn ? (
+                                <Link href="/community" onClick={() => handleItemClick('community')} className={navButtonClass('community', '/community')}>
+                                    {globalIcon(isActive('/community') ? "#4E2A18" : "#B3B3B3")}
+                                    <span className="navbar-menu-text font-normal !text-[12px] leading-[16px] mt-1 text-[#6E6E6E] text-nowrap">커뮤니티</span>
+                                </Link>
+                            ) : (
+                                <button type="button" onClick={(e) => handleNavClick(e, 'community', '/community')} className={navButtonClass('community', '/community')}>
+                                    {globalIcon(isActive('/community') ? "#4E2A18" : "#B3B3B3")}
+                                    <span className="navbar-menu-text font-normal !text-[12px] leading-[16px] mt-1 text-[#6E6E6E] text-nowrap">커뮤니티</span>
+                                </button>
+                            )}
 
-                            {/* Profile */}
-                            <Link
-                                href="/profile"
-                                onClick={() => handleItemClick('profile')}
-                                className={`navbar-menu-item w-[50%] text-center flex flex-col items-center cursor-pointer ${isActive('/profile') ? 'active' : ''} ${bouncingItem === 'profile' ? 'bounce' : ''}`}
-                            >
-                                {profileIcon(isActive('/profile') ? "#4E2A18" : "#B3B3B3")}
-                                <span className={`navbar-menu-text font-normal !text-[12px] leading-[16px] mt-1 text-[#6E6E6E]`}>MY</span>
-                            </Link>
+                            {/* MY - 비로그인 시 로그인 알럿 */}
+                            {isLoggedIn ? (
+                                <Link href="/profile" onClick={() => handleItemClick('profile')} className={navButtonClass('profile', '/profile')}>
+                                    {profileIcon(isActive('/profile') ? "#4E2A18" : "#B3B3B3")}
+                                    <span className="navbar-menu-text font-normal !text-[12px] leading-[16px] mt-1 text-[#6E6E6E]">MY</span>
+                                </Link>
+                            ) : (
+                                <button type="button" onClick={(e) => handleNavClick(e, 'profile', '/profile')} className={navButtonClass('profile', '/profile')}>
+                                    {profileIcon(isActive('/profile') ? "#4E2A18" : "#B3B3B3")}
+                                    <span className="navbar-menu-text font-normal !text-[12px] leading-[16px] mt-1 text-[#6E6E6E]">MY</span>
+                                </button>
+                            )}
                         </div>
                     </div>
                 </div>
             </div>
+
+            <LoginRequiredAlert isOpen={showLoginAlert} onClose={() => setShowLoginAlert(false)} />
         </div>
     );
 };
