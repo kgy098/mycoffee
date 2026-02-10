@@ -7,6 +7,7 @@ import { CircleAlert, Trash, X } from "lucide-react";
 import { useGet } from "@/hooks/useApi";
 import { useQueryClient, useMutation } from "@tanstack/react-query";
 import { api } from "@/lib/api";
+import { useUserStore } from "@/stores/user-store";
 
 interface AnalysisResult {
   id: number;
@@ -28,9 +29,17 @@ const ReadyPage = () => {
   const [selectedResultId, setSelectedResultId] = useState<number | null>(null);
   const [analysisResults, setAnalysisResults] = useState<AnalysisResult[]>([]);
   const queryClient = useQueryClient();
+  const { user } = useUserStore();
+  const userId = user?.isAuthenticated ? user.data.user_id : null;
 
-  // 24시간 이내 분석 결과 조회
-  const { data, isLoading } = useGet(['/api/analysis-results'], '/api/analysis-results?hours=24');
+  // 24시간 이내 분석 결과 조회 (로그인 시 해당 사용자 결과만)
+  const analysisResultsUrl = userId != null
+    ? `/api/analysis-results?hours=24&user_id=${userId}`
+    : '/api/analysis-results?hours=24';
+  const { data, isLoading } = useGet(
+    ['/api/analysis-results', String(userId ?? 'anonymous')],
+    analysisResultsUrl
+  );
 
   // 삭제 mutation
   const { mutate: deleteResult, isPending: isDeleting } = useMutation({
