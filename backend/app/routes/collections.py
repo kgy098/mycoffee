@@ -174,8 +174,7 @@ async def get_collection_detail(
                 "body": analysis.body,
                 "nuttiness": analysis.nuttiness,
             }
-            if analysis.interpretation:
-                summary = analysis.interpretation
+            # summary는 블렌드 한줄 요약만 사용. AI 스토리는 별도 GET /api/analytics/ai-story/{id} 로 조회
 
     blend_payload = None
     if blend:
