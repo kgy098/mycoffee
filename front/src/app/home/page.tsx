@@ -55,7 +55,7 @@ function HomePageContent() {
             )}
 
             {/* Main Content */}
-            <div className='bg-background'> 
+            <div className='bg-background'>  
                 {/* Main Banner - 메인 취향분석: 비로그인 시 로그인 필요 알럿 */}
                 <MainBanner onRequireLogin={() => setShowLoginAlert(true)} />
 
