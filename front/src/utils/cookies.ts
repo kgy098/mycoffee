@@ -77,3 +77,24 @@ export const removeRememberTokenCookie = () => {
   if (domain) parts.push(`domain=${domain}`);
   document.cookie = parts.join("; ");
 };
+
+/** 자동로그인 체크박스 여부 (로그인 페이지에서 체크 상태 복원용) */
+export const setRememberMeCookie = (checked: boolean) => {
+  if (typeof document === "undefined" || typeof window === "undefined") return;
+  const domain = getCookieDomain();
+  const parts = [
+    `remember_me=${checked ? "1" : "0"}`,
+    "path=/",
+    checked ? "max-age=2592000" : "expires=Thu, 01 Jan 1970 00:00:00 UTC",
+  ];
+  if (domain) parts.push(`domain=${domain}`);
+  if (checked && (domain || !isLocalhost())) parts.push("SameSite=None", "Secure");
+  else if (checked && isLocalhost()) parts.push("SameSite=Lax");
+  document.cookie = parts.join("; ");
+};
+
+export const getRememberMeCookie = (): boolean => {
+  if (typeof document === "undefined") return false;
+  const match = document.cookie.match(/\bremember_me=([^;]*)/);
+  return match ? match[1].trim() === "1" : false;
+};

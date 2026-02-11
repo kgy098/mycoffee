@@ -8,7 +8,7 @@ import { useHeaderStore } from "@/stores/header-store";
 import { Lock, Mail } from "lucide-react";
 import { usePost } from "@/hooks/useApi";
 import { User, useUserStore } from "@/stores/user-store";
-import { setAccessTokenCookie, setRememberTokenCookie } from "@/utils/cookies";
+import { setAccessTokenCookie, setRememberTokenCookie, getRememberMeCookie, setRememberMeCookie } from "@/utils/cookies";
 
 const warningIcon = () => {
   return (
@@ -49,6 +49,10 @@ export default function Login() {
       showBackButton: true,
     });
   }, [setHeader]);
+
+  useEffect(() => {
+    setIsRememberChecked(getRememberMeCookie());
+  }, []);
 
   const { mutate: signin, isPending: isGettingLogin } = usePost<User, {[key: string]: any}>(
     '/api/auth/login',
@@ -237,7 +241,11 @@ export default function Login() {
             className="cursor-pointer auth-checkbox w-5 h-5 bg-transparent border border-[#B3B3B3] rounded focus:ring-[#62402D] focus:ring-0"
             style={{ accentColor: '#FF7939' }}
             checked={isRememberChecked}
-            onChange={(e) => setIsRememberChecked(e.target.checked)}
+            onChange={(e) => {
+              const checked = e.target.checked;
+              setIsRememberChecked(checked);
+              setRememberMeCookie(checked);
+            }}
           />
           <label htmlFor="remember" className="leading-[16px] ml-2 text-xs text-gray-0 font-normal cursor-pointer">
             자동 로그인
