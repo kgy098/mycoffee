@@ -94,7 +94,7 @@ const CoffeeAnalysisDetail = () => {
     const { data: similarBlends } = useGet<SimilarBlend[]>(
         ["analysis-result-similar", resultId],
         `/api/analytics/similar/${resultId}`,
-        { params: { limit: 5 } },
+        { params: { limit: 3 } },
         { enabled: canFetch }
     );
 
