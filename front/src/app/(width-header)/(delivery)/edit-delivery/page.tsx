@@ -1,10 +1,11 @@
 "use client";
 import ActionSheet from "@/components/ActionSheet";
 import { useRouter, useSearchParams } from "next/navigation";
-import React, { useEffect, useMemo, useState } from "react";
+import React, { useCallback, useEffect, useMemo, useState } from "react";
 import { useHeaderStore } from "@/stores/header-store";
 import { useGet, usePut } from "@/hooks/useApi";
 import { useUserStore } from "@/stores/user-store";
+
 
 const EditDelivery = () => {
   const [recipient, setRecipient] = useState("");
@@ -66,6 +67,28 @@ const EditDelivery = () => {
     }
   );
 
+  const handleOpenPostcode = useCallback(() => {
+    if (typeof window === "undefined") return;
+    const openPostcode = () => {
+      if (!(window as any).daum?.Postcode) return;
+      new (window as any).daum.Postcode({
+        oncomplete: (data: { zonecode: string; roadAddress: string; address: string }) => {
+          setZipCode(data.zonecode || "");
+          setZipAddress(data.roadAddress || data.address || "");
+        },
+      }).open();
+    };
+    if ((window as any).daum?.Postcode) {
+      openPostcode();
+      return;
+    }
+    const script = document.createElement("script");
+    script.src = "https://t1.daumcdn.net/mapjsapi/bundle/postcode/prod/postcode.v2.js";
+    script.async = true;
+    script.onload = () => openPostcode();
+    document.body.appendChild(script);
+  }, []);
+
   const handleSubmit = () => {
     if (!userId || !addressId || isDisabled) return;
     updateAddress({
@@ -122,7 +145,8 @@ const EditDelivery = () => {
                 className="flex-1 h-10 px-4 text-xs leading-[16px] rounded-lg border border-border-default text-gray-0"
               />
               <button
-                // onClick={handleChangePhone}
+                type="button"
+                onClick={handleOpenPostcode}
                 className="px-4 h-10 text-xs leading-[20px] rounded-lg border border-primary text-primary font-bold"
               >
                 우편번호 찾기

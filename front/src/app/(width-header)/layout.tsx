@@ -1,4 +1,5 @@
 import React from "react";
+import Script from "next/script";
 import Header from "@/components/Header";
 
 export default function LayoutFooter({
@@ -8,6 +9,11 @@ export default function LayoutFooter({
 }) {
 
   return (
+    <>
+      <Script
+        src="https://t1.daumcdn.net/mapjsapi/bundle/postcode/prod/postcode.v2.js"
+        strategy="lazyOnload"
+      />
     <div className="h-[100dvh] bg-background flex flex-col">
         <Header  />
         {/* Main Content */}
@@ -15,5 +21,6 @@ export default function LayoutFooter({
             {children}
         </div>
     </div>
+    </>
   );
 }
