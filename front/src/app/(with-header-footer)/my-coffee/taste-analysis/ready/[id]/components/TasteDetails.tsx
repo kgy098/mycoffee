@@ -3,6 +3,13 @@
 import React from "react";
 import { CoffeePreferences } from "@/types/coffee";
 
+/** 별 아이콘 (색상 유지, 채움/비움) */
+const StarIcon = ({ filled, fillColor }: { filled: boolean; fillColor: string }) => (
+  <svg width="14" height="14" viewBox="0 0 24 24" fill={fillColor} className="shrink-0">
+    <path d="M12 2l3.09 6.26L22 9.27l-5 4.87 1.18 6.88L12 17.77l-6.18 3.25L7 14.14 2 9.27l6.91-1.01L12 2z" />
+  </svg>
+);
+
 /** 화면 표시 순서: 향 → 산미 → 고소함 → 단맛 → 바디 */
 const ATTRIBUTE_KEYS: (keyof CoffeePreferences)[] = ["aroma", "acidity", "nuttiness", "sweetness", "body"];
 
@@ -51,27 +58,24 @@ const TasteDetails: React.FC<TasteDetailsProps> = ({
         const description =
           descriptionByKeyScore[`${key}_${score}`] ?? FALLBACK_DESCRIPTIONS[key];
 
+        const activeColor = `var(--${color})`;
         return (
           <div
             key={key}
             className="bg-background-sub border border-line rounded-lg px-4 py-3"
           >
-            <div className="flex items-start justify-between mb-2">
-              <h3 className="text-xs font-bold text-gray-0">
-                {label} <span className="text-text-secondary font-normal">{score}/5</span>
-              </h3>
-              <div className="flex gap-1">
-                {[1, 2, 3, 4, 5].map((dot) => (
-                  <div
-                    key={dot}
-                    className="w-2 h-2 rounded-full"
-                    style={{
-                      backgroundColor:
-                        dot <= score ? `var(--${color})` : "#E6E6E6",
-                    }}
+            <h3 className="text-xs font-bold text-gray-0 mb-2">{label}</h3>
+            <div className="flex items-center justify-between mb-2">
+              <div className="flex gap-0.5">
+                {[1, 2, 3, 4, 5].map((n) => (
+                  <StarIcon
+                    key={n}
+                    filled={n <= score}
+                    fillColor={n <= score ? activeColor : "#E6E6E6"}
                   />
                 ))}
               </div>
+              <span className="text-xl font-bold text-gray-0 tabular-nums">{score}</span>
             </div>
             <p className="text-[12px] text-text-secondary leading-[160%]">
               {description}
