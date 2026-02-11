@@ -8,7 +8,10 @@ import { useUserStore } from "@/stores/user-store";
 import { useRouter } from "next/navigation";
 const PurchaseIndividualItem = () => {
 
-  const { order, increaseQuantity, decreaseQuantity, removeItem } = useOrderStore();
+  const order = useOrderStore((state) => state.order);
+  const increaseQuantity = useOrderStore((state) => state.increaseQuantity);
+  const decreaseQuantity = useOrderStore((state) => state.decreaseQuantity);
+  const removeItem = useOrderStore((state) => state.removeItem);
   const { user } = useUserStore();
   const router = useRouter();
   const { setHeader } = useHeaderStore();
@@ -111,9 +114,9 @@ const PurchaseIndividualItem = () => {
   const productPrice = 36000;
   const deliveryFee = 0;
 
-  // Calculate total from all items in the order
+  // Calculate total from all items in the order (반응형: order 변경 시 재계산)
   const totalProductPrice = order.reduce((sum, item) => {
-    return sum + (item.price || productPrice) * (item.quantity || 1);
+    return sum + (item.price ?? productPrice) * (item.quantity ?? 1);
   }, 0);
 
   const totalPrice = totalProductPrice - pointUsage + deliveryFee;

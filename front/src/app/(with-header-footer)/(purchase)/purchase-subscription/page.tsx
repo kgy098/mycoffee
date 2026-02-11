@@ -8,11 +8,14 @@ import { useUserStore } from "@/stores/user-store";
 import { useRouter } from "next/navigation";
 const PurchaseSubscription = () => {
   const { setHeader } = useHeaderStore();
-  const { order, currentMeta, subscriptionInfo } = useOrderStore();
+  const order = useOrderStore((state) => state.order);
+  const currentMeta = useOrderStore((state) => state.currentMeta);
+  const subscriptionInfo = useOrderStore((state) => state.subscriptionInfo);
   const { user } = useUserStore();
   const userId = user?.data?.user_id;
   const router = useRouter();
-  const [quantity, setQuantity] = useState(1);
+  const orderTotalQty = order.reduce((sum, item) => sum + (item.quantity ?? 1), 0);
+  const [quantity, setQuantity] = useState(() => Math.max(1, orderTotalQty));
   const [pointUsage, setPointUsage] = useState(0);
   const [agreements, setAgreements] = useState({
     all: false,
@@ -36,6 +39,11 @@ const PurchaseSubscription = () => {
       showBackButton: true,
     });
   }, [setHeader]);
+
+  useEffect(() => {
+    const total = order.reduce((sum, item) => sum + (item.quantity ?? 1), 0);
+    if (total >= 1) setQuantity(total);
+  }, [order]);
 
   const { data: pointsBalance } = useGet<{ balance: number }>(
     ["points-balance", userId],
@@ -116,6 +124,14 @@ const PurchaseSubscription = () => {
   const deliveryFee = 0;
   const totalProductPrice = productPrice * quantity;
   const totalPrice = totalProductPrice - pointUsage + deliveryFee;
+
+  const firstDeliveryDateFormatted = subscriptionInfo.first_delivery_date
+    ? new Date(subscriptionInfo.first_delivery_date).toLocaleDateString("ko-KR", {
+        month: "long",
+        day: "numeric",
+        weekday: "short",
+      })
+    : "-";
 
   const handleSubmit = () => {
     if (!userId || !selectedAddress || !currentMeta.blend_id) return;
@@ -248,15 +264,17 @@ const PurchaseSubscription = () => {
                 <ul className="space-y-2 text-xs leading-[18px]">
                   <li className="flex justify-between items-center">
                     <span className="font-normal">첫 배송 희망일</span>
-                    <span className="font-bold">9월 3일(수)</span>
+                    <span className="font-bold">{firstDeliveryDateFormatted}</span>
                   </li>
                   <li className="flex justify-between items-center">
                     <span className="font-normal">1회차 결제일</span>
-                    <span className="font-bold">9월 1일(월)</span>
+                    <span className="font-bold">{firstDeliveryDateFormatted}</span>
                   </li>
                   <li className="flex justify-between items-center">
                     <span className="font-normal">이용 횟수</span>
-                    <span className="font-bold">총 4회</span>
+                    <span className="font-bold">
+                      총 {subscriptionInfo.total_cycles ?? "-"}회
+                    </span>
                   </li>
                 </ul>
               </div>
@@ -380,7 +398,7 @@ const PurchaseSubscription = () => {
               <h2 className="text-sm leading-[20px] font-bold ">
                 최종 결제금액
                 <span className=" ml-2 text-text-primary px-2 py-1 rounded-sm font-bold">
-                  36,000원
+                  {totalPrice.toLocaleString()}원
                 </span>
               </h2>
               {expandedSections.finalAmount ? (
@@ -415,7 +433,7 @@ const PurchaseSubscription = () => {
                       포인트 할인
                     </span>
                     <span className="text-xs leading-[18px] font-bold">
-                      {pointUsage.toLocaleString()}원
+                      -{pointUsage.toLocaleString()}원
                     </span>
                   </div>
                 </div>
