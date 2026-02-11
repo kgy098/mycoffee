@@ -8,6 +8,7 @@ from app.database import get_db
 from app.models import AnalysisResult, Blend, BlendOrigin
 from app.schemas.recommendation import TastePreferences
 from app.services.recommendation import RecommendationService
+from app.services.ai_story import generate_ai_story
 from pydantic import BaseModel
 
 router = APIRouter()
@@ -80,6 +81,13 @@ def _build_default_story(origins: List[BlendOrigin]) -> List[AiStorySection]:
     ]
 
 
+def _sections_to_response(sections: List[dict]) -> AiStoryResponse:
+    """dict 리스트를 AiStoryResponse로 변환"""
+    return AiStoryResponse(
+        sections=[AiStorySection(**s) for s in sections]
+    )
+
+
 def _normalize_story(raw: Any) -> Optional[List[AiStorySection]]:
     if not raw:
         return None
@@ -120,13 +128,19 @@ def _normalize_story(raw: Any) -> Optional[List[AiStorySection]]:
     return sections or None
 
 
+def _get_origin_text(origins: List[BlendOrigin]) -> str:
+    if not origins:
+        return "다양한 원산지의 조화"
+    return ", ".join([f"{o.origin} {o.pct}%" for o in origins])
+
+
 @router.get("/ai-story/{result_id}", response_model=AiStoryResponse)
 async def get_ai_story(
     result_id: int,
     db: Session = Depends(get_db)
 ):
     """
-    분석 결과 기반 AI 스토리 반환
+    분석 결과 기반 AI 스토리 반환. 캐시 없으면 OpenAI로 생성 후 interpretation에 저장.
     """
     result = db.query(AnalysisResult).filter(AnalysisResult.id == result_id).first()
     if not result:
@@ -145,10 +159,66 @@ async def get_ai_story(
             )
 
     story_sections = _normalize_story(result.score) or _normalize_story(result.interpretation)
+
+    if not story_sections and blend:
+        generated = generate_ai_story(
+            blend_name=blend.name,
+            summary=blend.summary or "",
+            aroma=result.aroma,
+            acidity=result.acidity,
+            sweetness=result.sweetness,
+            body=result.body,
+            nuttiness=result.nuttiness,
+            origin_text=_get_origin_text(origins),
+        )
+        if generated:
+            story_sections = [AiStorySection(**s) for s in generated]
+            try:
+                result.interpretation = json.dumps({"sections": [s.model_dump() for s in story_sections]})
+                db.commit()
+            except Exception:
+                db.rollback()
+
     if not story_sections:
         story_sections = _build_default_story(origins)
 
     return AiStoryResponse(sections=story_sections)
+
+
+@router.get("/ai-story/by-blend/{blend_id}", response_model=AiStoryResponse)
+async def get_ai_story_by_blend(
+    blend_id: int,
+    db: Session = Depends(get_db)
+):
+    """
+    블렌드 ID 기반 AI 스토리 반환 (이달의 커피 상세 등). OpenAI로 생성.
+    """
+    blend = db.query(Blend).filter(Blend.id == blend_id).first()
+    if not blend:
+        raise HTTPException(status_code=404, detail="블렌드를 찾을 수 없습니다")
+
+    origins = (
+        db.query(BlendOrigin)
+        .filter(BlendOrigin.blend_id == blend.id)
+        .order_by(BlendOrigin.display_order.asc(), BlendOrigin.id.asc())
+        .all()
+    )
+    origin_text = _get_origin_text(origins)
+
+    generated = generate_ai_story(
+        blend_name=blend.name,
+        summary=blend.summary or "",
+        aroma=blend.aroma,
+        acidity=blend.acidity,
+        sweetness=blend.sweetness,
+        body=blend.body,
+        nuttiness=blend.nuttiness,
+        origin_text=origin_text,
+    )
+
+    if generated:
+        return _sections_to_response(generated)
+    return AiStoryResponse(sections=_build_default_story(origins))
 
 
 @router.get("/similar/{result_id}", response_model=List[SimilarBlendResponse])

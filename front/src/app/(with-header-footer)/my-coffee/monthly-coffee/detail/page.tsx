@@ -52,6 +52,13 @@ const MonthlyCoffeeDetail = () => {
         };
     }, [currentMonthly]);
 
+    const { data: aiStory } = useGet<{ sections: { title: string; icon: string; content: string[] }[] }>(
+        ["monthly-coffee-ai-story", currentMonthly?.blend_id],
+        currentMonthly?.blend_id ? `/api/analytics/ai-story/by-blend/${currentMonthly.blend_id}` : "",
+        {},
+        { enabled: !!currentMonthly?.blend_id }
+    );
+
     const accordionItems = [
         {
             id: 0,
@@ -145,7 +152,7 @@ const MonthlyCoffeeDetail = () => {
                                         ) : item.id === 1 ? (
                                             <div>
                                                 {/* Coffee Collection Slider */}
-                                                <CoffeeCollectionSlider />
+                                                <CoffeeCollectionSlider data={aiStory?.sections} />
                                             </div>
                                         ) : (
                                             <p className="text-sm text-gray-600 leading-relaxed">

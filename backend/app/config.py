@@ -23,7 +23,10 @@ class Settings(BaseSettings):
     
     # Security
     secret_key: str = "your_secret_key_change_in_production"
-    
+
+    # OpenAI (AI 스토리 생성, 없으면 기본 문구 사용)
+    openai_api_key: str = ""
+
     class Config:
         env_file = ".env.local"
         case_sensitive = False
