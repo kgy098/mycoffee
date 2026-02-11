@@ -57,12 +57,12 @@ const EventDetail = () => {
               : ""}
           </p>
 
-          {/* Review Image */}
+          {/* 상세 이미지: 전체가 보이도록 표시 (잘리지 않음) */}
           <div className="mb-3 rounded-lg overflow-hidden">
             <img
-              src={event?.thumbnail_url || "/images/ice-coffee.png"}
-              alt="Coffee review"
-              className="w-full h-90 max-h-[350px] object-cover rounded-lg"
+              src={event?.detail_image_url || event?.thumbnail_url || "/images/ice-coffee.png"}
+              alt={event?.title || "이벤트"}
+              className="w-full rounded-lg object-contain"
             />
           </div>
 
