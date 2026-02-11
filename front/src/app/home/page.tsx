@@ -58,7 +58,7 @@ function HomePageContent() {
                 <CoffeeStories />
 
                 {/* Footer */}
-                <Footer />
+                <Footer /> 
             </div>
 
             {/* 로그인 필요 알럿 (화면 하단) */}
