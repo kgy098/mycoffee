@@ -36,7 +36,7 @@ const OrderingComponent = ({
   const [orderLabelOption, setOrderLabelOption] = useState(false);
   const [orderSubscriptionDeleviryDate, setOrderSubscriptionDeleviryDate] = useState(false);
 
-  const { order, increaseQuantity, decreaseQuantity, setCurrentMeta } = useOrderStore();
+  const { order, increaseQuantity, decreaseQuantity, removeItem, setCurrentMeta } = useOrderStore();
   const router = useRouter();
 
   const openModal = () => {
@@ -170,7 +170,14 @@ const OrderingComponent = ({
                 <p className="font-bold text-xs leading-[18px]">
                   나만의 커피 {idx + 1}호기/클래식 하모니 블랜드
                 </p>
-                <button onClick={() => { }}>
+                <button
+                  type="button"
+                  onClick={(e) => {
+                    e.stopPropagation();
+                    removeItem(idx);
+                  }}
+                  className="shrink-0 p-1 cursor-pointer hover:opacity-70"
+                >
                   <XIcon size={16} stroke="#1A1A1A" />
                 </button>
               </div>
@@ -248,7 +255,11 @@ const OrderingComponent = ({
                 <div className="absolute top-full left-1/2 transform -translate-x-1/2 w-0 h-0 border-l-4 border-r-4 border-t-4 border-l-transparent border-r-transparent border-t-gray-900"></div>
                 {/* X button */}
                 <button
-                  onClick={closeTooltip}
+                  type="button"
+                  onClick={(e) => {
+                    e.stopPropagation();
+                    closeTooltip();
+                  }}
                   className="size-4 cursor-pointer inline-flex items-center justify-center hover:bg-gray-700 rounded"
                 >
                   <svg

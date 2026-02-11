@@ -85,19 +85,20 @@ export default function CalendarPage({
     );
   };
 
-  // Handle date selection
+  // Handle date selection (년/월/일 전체로 비교해야 다른 달 미래일이 지난일로 잘못 잡히지 않음)
   const handleDateSelect = (day: number) => {
-  
-    if (day < new Date().getDate()) {
-      alert("You can't select past day");
-      return;
-    }
-
     const selectedDateObj = new Date(
       currentDate.getFullYear(),
       currentDate.getMonth(),
       day
     );
+    const today = new Date();
+    today.setHours(0, 0, 0, 0);
+    selectedDateObj.setHours(0, 0, 0, 0);
+    if (selectedDateObj < today) {
+      alert("지난일은 선택할 수 없습니다.");
+      return;
+    }
     setSelectedDate(selectedDateObj);
     setDeliveryDate(selectedDateObj);
   };
