@@ -1,11 +1,10 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useState } from "react";
 import AdminBadge from "@/components/admin/AdminBadge";
 import AdminPageHeader from "@/components/admin/AdminPageHeader";
 import AdminTable from "@/components/admin/AdminTable";
 import { useGet } from "@/hooks/useApi";
-import { useUserStore } from "@/stores/user-store";
  
  type SubscriptionItem = {
    id: number;
@@ -18,31 +17,19 @@ import { useUserStore } from "@/stores/user-store";
  };
  
  export default function SubscriptionsPage() {
-   const userIdFromStore = useUserStore((state) => state.user.data.user_id);
-   const [userIdInput, setUserIdInput] = useState(
-     userIdFromStore ? String(userIdFromStore) : ""
-   );
-   const [appliedUserId, setAppliedUserId] = useState<number | null>(
-     userIdFromStore || null
-   );
+  const [userIdInput, setUserIdInput] = useState("");
+  const [appliedUserId, setAppliedUserId] = useState<number | null>(null);
  
    const { data: subscriptions = [], isLoading, error } = useGet<SubscriptionItem[]>(
      ["admin-subscriptions", appliedUserId],
-     "/api/subscriptions",
+    "/api/admin/subscriptions",
      {
-       params: { user_id: appliedUserId ?? undefined },
+      params: { user_id: appliedUserId ?? undefined },
      },
      {
-       enabled: Boolean(appliedUserId),
        refetchOnWindowFocus: false,
      }
    );
- 
-   useEffect(() => {
-     if (!appliedUserId && userIdFromStore) {
-       setAppliedUserId(userIdFromStore);
-     }
-   }, [appliedUserId, userIdFromStore]);
  
    const applyFilter = () => {
      const nextId = Number(userIdInput);
@@ -103,9 +90,7 @@ import { useUserStore } from "@/stores/user-store";
             ? "로딩 중..."
             : error
             ? "구독 데이터를 불러오지 못했습니다."
-            : appliedUserId
-            ? "구독 내역이 없습니다."
-            : "회원 ID를 입력해주세요."
+          : "구독 내역이 없습니다."
         }
        />
      </div>

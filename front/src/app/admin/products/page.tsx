@@ -23,16 +23,14 @@ import { useGet } from "@/hooks/useApi";
  
  export default function ProductsListPage() {
    const [search, setSearch] = useState("");
-   const { data: blends = [], isLoading, error } = useGet<Blend[]>(
-     ["admin-blends"],
-     "/api/blends",
-     { params: { skip: 0, limit: 50 } },
+  const { data: blends = [], isLoading, error } = useGet<Blend[]>(
+    ["admin-blends", search],
+    "/api/admin/blends",
+    { params: { skip: 0, limit: 50, q: search || undefined } },
      { refetchOnWindowFocus: false }
    );
  
-   const filtered = blends.filter((blend) =>
-     blend.name?.toLowerCase().includes(search.toLowerCase())
-   );
+  const filtered = blends;
  
    return (
      <div className="space-y-6">

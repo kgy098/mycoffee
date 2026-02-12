@@ -17,13 +17,12 @@ type BlendDetail = {
   price?: number | null;
   stock?: number | null;
   thumbnail_url?: string | null;
-  origin_ratios?: Record<string, number> | null;
-  attributes?: Record<string, number> | null;
   aroma?: number;
   acidity?: number;
   sweetness?: number;
   body?: number;
   nuttiness?: number;
+  is_active?: boolean;
 };
 
 export default function ProductForm({ mode, productId }: ProductFormProps) {
@@ -32,23 +31,23 @@ export default function ProductForm({ mode, productId }: ProductFormProps) {
   const [price, setPrice] = useState("");
   const [stock, setStock] = useState("");
   const [thumbnailUrl, setThumbnailUrl] = useState("");
-  const [originRatios, setOriginRatios] = useState("{}");
   const [aroma, setAroma] = useState("");
   const [acidity, setAcidity] = useState("");
   const [sweetness, setSweetness] = useState("");
   const [body, setBody] = useState("");
   const [nuttiness, setNuttiness] = useState("");
+  const [isActive, setIsActive] = useState(true);
   const [message, setMessage] = useState<string | null>(null);
 
   const { data: blend } = useGet<BlendDetail>(
     ["admin-blend", productId],
-    `/api/blends/${productId}`,
+    `/api/admin/blends/${productId}`,
     undefined,
     { enabled: mode === "edit" && Boolean(productId) }
   );
 
   const { mutate: createBlend, isPending: isCreating } = usePost(
-    "/api/blends",
+    "/api/admin/blends",
     {
       onSuccess: () => setMessage("등록되었습니다."),
       onError: (err: any) =>
@@ -57,7 +56,7 @@ export default function ProductForm({ mode, productId }: ProductFormProps) {
   );
 
   const { mutate: updateBlend, isPending: isUpdating } = usePut(
-    `/api/blends/${productId}`,
+    `/api/admin/blends/${productId}`,
     {
       onSuccess: () => setMessage("수정되었습니다."),
       onError: (err: any) =>
@@ -72,15 +71,12 @@ export default function ProductForm({ mode, productId }: ProductFormProps) {
     setPrice(blend.price ? String(blend.price) : "");
     setStock(blend.stock ? String(blend.stock) : "");
     setThumbnailUrl(blend.thumbnail_url || "");
-    if (blend.origin_ratios) {
-      setOriginRatios(JSON.stringify(blend.origin_ratios, null, 2));
-    }
-    const attrs = blend.attributes || {};
-    setAroma(String(attrs.aroma ?? blend.aroma ?? ""));
-    setAcidity(String(attrs.acidity ?? blend.acidity ?? ""));
-    setSweetness(String(attrs.sweetness ?? blend.sweetness ?? ""));
-    setBody(String(attrs.body ?? blend.body ?? ""));
-    setNuttiness(String(attrs.nuttiness ?? blend.nuttiness ?? ""));
+    setAroma(String(blend.aroma ?? ""));
+    setAcidity(String(blend.acidity ?? ""));
+    setSweetness(String(blend.sweetness ?? ""));
+    setBody(String(blend.body ?? ""));
+    setNuttiness(String(blend.nuttiness ?? ""));
+    setIsActive(blend.is_active ?? true);
   }, [blend]);
 
   const submit = () => {
@@ -89,28 +85,18 @@ export default function ProductForm({ mode, productId }: ProductFormProps) {
       setMessage("상품명을 입력해주세요.");
       return;
     }
-    let originData: Record<string, number> = {};
-    try {
-      originData = originRatios ? JSON.parse(originRatios) : {};
-    } catch {
-      setMessage("원산지 비율 JSON 형식이 올바르지 않습니다.");
-      return;
-    }
-
     const payload = {
       name,
       summary: summary || null,
-      origin_ratios: originData,
-      attributes: {
-        aroma: Number(aroma) || 0,
-        acidity: Number(acidity) || 0,
-        sweetness: Number(sweetness) || 0,
-        body: Number(body) || 0,
-        nuttiness: Number(nuttiness) || 0,
-      },
+      aroma: Number(aroma) || 0,
+      acidity: Number(acidity) || 0,
+      sweetness: Number(sweetness) || 0,
+      body: Number(body) || 0,
+      nuttiness: Number(nuttiness) || 0,
       price: price ? Number(price) : null,
       stock: stock ? Number(stock) : 0,
       thumbnail_url: thumbnailUrl || null,
+      is_active: isActive,
     };
 
     if (mode === "create") {
@@ -174,6 +160,17 @@ export default function ProductForm({ mode, productId }: ProductFormProps) {
               onChange={(event) => setThumbnailUrl(event.target.value)}
             />
           </div>
+          <div>
+            <label className="text-xs text-white/60">판매 상태</label>
+            <select
+              className="mt-1 w-full rounded-lg border border-white/10 bg-transparent px-3 py-2 text-sm text-white/80"
+              value={isActive ? "active" : "inactive"}
+              onChange={(event) => setIsActive(event.target.value === "active")}
+            >
+              <option value="active">판매중</option>
+              <option value="inactive">중지</option>
+            </select>
+          </div>
         </div>
 
         <div className="mt-6">
@@ -197,18 +194,6 @@ export default function ProductForm({ mode, productId }: ProductFormProps) {
               </div>
             ))}
           </div>
-        </div>
-
-        <div className="mt-6">
-          <p className="text-sm font-semibold text-white">원산지 비율</p>
-          <textarea
-            className="mt-3 h-28 w-full rounded-lg border border-white/10 bg-transparent px-3 py-2 text-sm text-white/80"
-            value={originRatios}
-            onChange={(event) => setOriginRatios(event.target.value)}
-          />
-          <p className="mt-2 text-xs text-white/40">
-            예: {"{ \"케냐\": 51, \"코스타리카\": 49 }"}
-          </p>
         </div>
 
         <div className="mt-6 flex flex-wrap gap-2">

@@ -1,11 +1,10 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useState } from "react";
 import AdminBadge from "@/components/admin/AdminBadge";
 import AdminPageHeader from "@/components/admin/AdminPageHeader";
 import AdminTable from "@/components/admin/AdminTable";
 import { useGet } from "@/hooks/useApi";
-import { useUserStore } from "@/stores/user-store";
  
  type PointsTransaction = {
    id: number;
@@ -17,18 +16,13 @@ import { useUserStore } from "@/stores/user-store";
  };
  
  export default function PointsPage() {
-   const userIdFromStore = useUserStore((state) => state.user.data.user_id);
-   const [userIdInput, setUserIdInput] = useState(
-     userIdFromStore ? String(userIdFromStore) : ""
-   );
-   const [appliedUserId, setAppliedUserId] = useState<number | null>(
-     userIdFromStore || null
-   );
+  const [userIdInput, setUserIdInput] = useState("");
+  const [appliedUserId, setAppliedUserId] = useState<number | null>(null);
    const [txnType, setTxnType] = useState("all");
  
    const { data: transactions = [], isLoading, error } = useGet<PointsTransaction[]>(
      ["admin-points", appliedUserId, txnType],
-     "/api/points/transactions",
+    "/api/admin/points/transactions",
      {
        params: {
          user_id: appliedUserId ?? undefined,
@@ -36,16 +30,9 @@ import { useUserStore } from "@/stores/user-store";
        },
      },
      {
-       enabled: Boolean(appliedUserId),
        refetchOnWindowFocus: false,
      }
    );
- 
-   useEffect(() => {
-     if (!appliedUserId && userIdFromStore) {
-       setAppliedUserId(userIdFromStore);
-     }
-   }, [appliedUserId, userIdFromStore]);
  
    const applyFilter = () => {
      const nextId = Number(userIdInput);
@@ -117,9 +104,7 @@ import { useUserStore } from "@/stores/user-store";
             ? "로딩 중..."
             : error
             ? "포인트 데이터를 불러오지 못했습니다."
-            : appliedUserId
-            ? "내역이 없습니다."
-            : "회원 ID를 입력해주세요."
+          : "내역이 없습니다."
         }
        />
      </div>

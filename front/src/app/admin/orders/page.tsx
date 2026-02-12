@@ -1,12 +1,11 @@
 "use client";
 
 import Link from "next/link";
-import { useEffect, useState } from "react";
+import { useState } from "react";
 import AdminBadge from "@/components/admin/AdminBadge";
 import AdminPageHeader from "@/components/admin/AdminPageHeader";
 import AdminTable from "@/components/admin/AdminTable";
 import { useGet } from "@/hooks/useApi";
-import { useUserStore } from "@/stores/user-store";
  
  type OrderItem = {
    id: number;
@@ -21,45 +20,37 @@ import { useUserStore } from "@/stores/user-store";
    order_number: string;
    order_type: string;
    status: string;
+  user_id: number;
+  user_name?: string | null;
    total_amount?: number | null;
    created_at: string;
    items: OrderItem[];
  };
  
- export default function OrdersPage() {
-   const userIdFromStore = useUserStore((state) => state.user.data.user_id);
-   const [userIdInput, setUserIdInput] = useState(
-     userIdFromStore ? String(userIdFromStore) : ""
-   );
-   const [appliedUserId, setAppliedUserId] = useState<number | null>(
-     userIdFromStore || null
-   );
-   const [status, setStatus] = useState("");
+export default function OrdersPage() {
+  const [userIdInput, setUserIdInput] = useState("");
+  const [appliedUserId, setAppliedUserId] = useState<number | null>(null);
+  const [status, setStatus] = useState("");
+  const [query, setQuery] = useState("");
  
    const {
      data: orders = [],
      isLoading,
      error,
-   } = useGet<OrderResponse[]>(
-     ["admin-orders", appliedUserId, status],
-     "/api/orders",
-     {
-       params: {
-         user_id: appliedUserId ?? undefined,
-         status: status || undefined,
-       },
-     },
-     {
-       enabled: Boolean(appliedUserId),
-       refetchOnWindowFocus: false,
-     }
-   );
- 
-   useEffect(() => {
-     if (!appliedUserId && userIdFromStore) {
-       setAppliedUserId(userIdFromStore);
-     }
-   }, [appliedUserId, userIdFromStore]);
+  } = useGet<OrderResponse[]>(
+    ["admin-orders", appliedUserId, status, query],
+    "/api/admin/orders",
+    {
+      params: {
+        user_id: appliedUserId || undefined,
+        status_filter: status || undefined,
+        q: query || undefined,
+      },
+    },
+    {
+      refetchOnWindowFocus: false,
+    }
+  );
  
    const applyFilter = () => {
      const nextId = Number(userIdInput);
@@ -99,15 +90,24 @@ import { useUserStore } from "@/stores/user-store";
               <option value="refunded">반품</option>
             </select>
            </div>
-           <div className="md:col-span-2">
-            <label className="text-xs text-white/60">조회할 회원 ID</label>
-             <input
-               className="mt-1 w-full rounded-lg border border-white/10 bg-transparent px-3 py-2 text-sm text-white/80"
-              placeholder="예: 1"
+          <div>
+            <label className="text-xs text-white/60">주문번호</label>
+            <input
+              className="mt-1 w-full rounded-lg border border-white/10 bg-transparent px-3 py-2 text-sm text-white/80"
+              placeholder="주문번호"
+              value={query}
+              onChange={(event) => setQuery(event.target.value)}
+            />
+          </div>
+          <div>
+            <label className="text-xs text-white/60">회원 ID</label>
+            <input
+              className="mt-1 w-full rounded-lg border border-white/10 bg-transparent px-3 py-2 text-sm text-white/80"
+              placeholder="선택"
               value={userIdInput}
               onChange={(event) => setUserIdInput(event.target.value)}
-             />
-           </div>
+            />
+          </div>
          </div>
          <div className="mt-4 flex flex-wrap gap-2">
           <button
@@ -131,7 +131,7 @@ import { useUserStore } from "@/stores/user-store";
                 order.order_number,
                 new Date(order.created_at).toLocaleString(),
                 order.order_type === "subscription" ? "구독" : "단품",
-                appliedUserId ? `회원 #${appliedUserId}` : "-",
+                order.user_name || `회원 #${order.user_id}`,
                 order.items?.[0]?.blend_name ||
                   order.items?.[0]?.collection_name ||
                   "-",
@@ -157,9 +157,7 @@ import { useUserStore } from "@/stores/user-store";
             ? "로딩 중..."
             : error
             ? "주문 데이터를 불러오지 못했습니다."
-            : appliedUserId
-            ? "주문 내역이 없습니다."
-            : "회원 ID를 입력해주세요."
+            : "주문 내역이 없습니다."
         }
        />
      </div>
