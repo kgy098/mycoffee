@@ -44,7 +44,7 @@ const MonthlyCoffeeDetail = () => {
             return { aroma: 1, acidity: 1, sweetness: 1, body: 1, nuttiness: 1 };
         }
         return {
-            aroma: currentMonthly.acidity || 1,
+            aroma: currentMonthly.aroma || 1,
             sweetness: currentMonthly.sweetness || 1,
             body: currentMonthly.body || 1,
             nuttiness: currentMonthly.nuttiness || 1,

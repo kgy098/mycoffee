@@ -30,18 +30,7 @@ function ResultContent() {
     const onOpenModal = () => setOpen(true);
     const onCloseModal = () => setOpen(false);
     
-    const [coffeeBlend, setCoffeeBlend] = useState<BlendType>({
-        name: "벨벳 터치 블렌드",
-        description: "깔끔한 마무리와 산뜻한 입안 감촉이 좋은 커피입니다.",
-        origins: ["케냐 51%", "코스타리카 49%"],
-        ratings: {
-            aroma: 5,
-            acidity: 4,
-            sweetness: 4,
-            nuttiness: 3,
-            body: 4
-        }
-    });
+    const [coffeeBlend, setCoffeeBlend] = useState<BlendType | null>(null);
 
     useEffect(() => {
         let currentRecommendations = recommendations;
@@ -69,7 +58,7 @@ function ResultContent() {
             setCoffeeBlend({
                 name: firstRec.coffee_name,
                 description: firstRec.summary,
-                origins: ["케냐 51%", "코스타리카 49%"],
+                origins: [],
                 ratings: {
                     aroma: firstRec.aroma_score,
                     acidity: firstRec.acidity_score,
@@ -97,11 +86,9 @@ function ResultContent() {
     );
 
     useEffect(() => {
-        if (hasRecommendations && originData) {
-            setCoffeeBlend(prev => ({
-                ...prev,
-                origins: originData?.origin_summary?.match(/.*?\d+%/g).map((origin: any) => origin.trim())
-            }));
+        if (hasRecommendations && originData?.origin_summary) {
+            const origins = originData.origin_summary.match(/.*?\d+%/g)?.map((origin: any) => origin.trim()) || [];
+            setCoffeeBlend(prev => prev ? ({ ...prev, origins }) : prev);
         }
     }, [originData, hasRecommendations]);
 
@@ -123,11 +110,11 @@ function ResultContent() {
                 <div className=''>
                     <div className='w-full'>
                         <div className='px-[7px]'>
-                            <h1 className="text-xl font-bold text-gray-0 mb-2">{coffeeBlend.name}</h1>
-                            <p className="text-sm mb-2 font-normal text-text-secondary">{coffeeBlend.description}</p>
+                            <h1 className="text-xl font-bold text-gray-0 mb-2">{coffeeBlend?.name || ""}</h1>
+                            <p className="text-sm mb-2 font-normal text-text-secondary">{coffeeBlend?.description || ""}</p>
 
                             <div className="flex gap-1 mb-16">
-                                {coffeeBlend.origins.map((origin, idx) => (
+                                {(coffeeBlend?.origins || []).map((origin, idx) => (
                                     <span
                                         key={idx}
                                         className="px-2 py-1 bg-[rgba(0,0,0,0.05)] rounded-[10px] text-[12px] text-gray-0 leading-[16px]"
@@ -140,7 +127,7 @@ function ResultContent() {
 
                         <div className="relative">
                             <SpiderChart
-                                ratings={coffeeBlend.ratings}
+                                ratings={coffeeBlend?.ratings || { aroma: 1, acidity: 1, sweetness: 1, nuttiness: 1, body: 1 }}
                                 setRatings={() => { }}
                                 isChangable={false}
                                 isClickable={true}

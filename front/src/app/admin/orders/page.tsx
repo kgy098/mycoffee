@@ -32,19 +32,21 @@ export default function OrdersPage() {
   const [appliedUserId, setAppliedUserId] = useState<number | null>(null);
   const [status, setStatus] = useState("");
   const [query, setQuery] = useState("");
+  const [orderType, setOrderType] = useState("");
  
    const {
      data: orders = [],
      isLoading,
      error,
   } = useGet<OrderResponse[]>(
-    ["admin-orders", appliedUserId, status, query],
+    ["admin-orders", appliedUserId, status, query, orderType],
     "/api/admin/orders",
     {
       params: {
         user_id: appliedUserId || undefined,
         status_filter: status || undefined,
         q: query || undefined,
+        order_type: orderType || undefined,
       },
     },
     {
@@ -67,12 +69,16 @@ export default function OrdersPage() {
        <div className="rounded-xl border border-white/10 bg-[#141414] p-4">
          <div className="grid gap-3 md:grid-cols-4">
            <div>
-             <label className="text-xs text-white/60">구분</label>
-             <select className="mt-1 w-full rounded-lg border border-white/10 bg-transparent px-3 py-2 text-sm text-white/80">
-              <option>전체</option>
-              <option>단품</option>
-              <option>구독</option>
-             </select>
+            <label className="text-xs text-white/60">구분</label>
+            <select
+              className="mt-1 w-full rounded-lg border border-white/10 bg-transparent px-3 py-2 text-sm text-white/80"
+              value={orderType}
+              onChange={(event) => setOrderType(event.target.value)}
+            >
+              <option value="">전체</option>
+              <option value="single">단품</option>
+              <option value="subscription">구독</option>
+            </select>
            </div>
            <div>
              <label className="text-xs text-white/60">상태</label>
@@ -116,7 +122,16 @@ export default function OrdersPage() {
           >
             조회
           </button>
-           <button className="rounded-lg border border-white/20 px-4 py-2 text-xs text-white/70">
+          <button
+            className="rounded-lg border border-white/20 px-4 py-2 text-xs text-white/70"
+            onClick={() => {
+              setOrderType("");
+              setStatus("");
+              setQuery("");
+              setUserIdInput("");
+              setAppliedUserId(null);
+            }}
+          >
              검색 초기화
            </button>
          </div>

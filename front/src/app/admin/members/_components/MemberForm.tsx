@@ -25,6 +25,7 @@ export default function MemberForm({ mode, memberId }: MemberFormProps) {
   const [phone, setPhone] = useState("");
   const [provider, setProvider] = useState("email");
   const [isAdmin, setIsAdmin] = useState(false);
+  const [password, setPassword] = useState("");
   const [message, setMessage] = useState<string | null>(null);
 
   const { data: member } = useGet<AdminUser>(
@@ -73,6 +74,7 @@ export default function MemberForm({ mode, memberId }: MemberFormProps) {
       display_name: name || null,
       provider,
       is_admin: isAdmin,
+      password: password || undefined,
     };
 
     if (mode === "create") {
@@ -141,6 +143,18 @@ export default function MemberForm({ mode, memberId }: MemberFormProps) {
               <option value="false">일반 회원</option>
               <option value="true">관리자</option>
             </select>
+          </div>
+          <div className="md:col-span-2">
+            <label className="text-xs text-white/60">
+              {mode === "create" ? "비밀번호" : "새 비밀번호"}
+            </label>
+            <input
+              type="password"
+              className="mt-1 w-full rounded-lg border border-white/10 bg-transparent px-3 py-2 text-sm text-white/80"
+              placeholder={mode === "create" ? "비밀번호 입력" : "비워두면 변경 없음"}
+              value={password}
+              onChange={(event) => setPassword(event.target.value)}
+            />
           </div>
         </div>
 

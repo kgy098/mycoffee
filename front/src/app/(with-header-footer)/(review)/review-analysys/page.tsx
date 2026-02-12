@@ -46,12 +46,26 @@ const ReviewAnalysys = () => {
     return blendOrigins.map((origin) => `${origin.origin} ${origin.pct}%`).join(", ");
   }, [blendOrigins]);
 
+  const { data: aiStory } = useGet<any>(
+    ["review-ai-story", blendIdNumber],
+    `/api/analytics/ai-story/by-blend/${blendIdNumber}`,
+    {},
+    { enabled: !!blendIdNumber }
+  );
+
+  const { data: similarBlends } = useGet<any[]>(
+    ["review-similar-blends", blendIdNumber],
+    `/api/analytics/similar/by-blend/${blendIdNumber}`,
+    { params: { limit: 5 } },
+    { enabled: !!blendIdNumber }
+  );
+
   const tasteRatings: CoffeePreferences = useMemo(() => {
     if (!blendDetail) {
       return { aroma: 1, acidity: 1, sweetness: 1, body: 1, nuttiness: 1 };
     }
     return {
-      aroma: blendDetail.acidity || 1,
+      aroma: blendDetail.aroma || 1,
       sweetness: blendDetail.sweetness || 1,
       body: blendDetail.body || 1,
       nuttiness: blendDetail.nuttiness || 1,
@@ -63,19 +77,14 @@ const ReviewAnalysys = () => {
     {
       id: 0,
       title: "원두 프로파일",
-      content:
-        "이 페이지는 커피 분석의 상세 정보를 보여줍니다. 개인화된 커피 추천과 함께 다양한 분석 결과를 확인할 수 있습니다.",
     },
     {
       id: 1,
       title: "AI 커피 추천 스토리",
-      content:
-        "분석 결과가 여기에 표시됩니다. 향, 산미, 바디감, 단맛, 고소함 등의 다양한 요소들이 종합적으로 분석되어 표시됩니다.",
     },
     {
       id: 2,
       title: "다른 커피는 어때요?",
-      content: "개인화된 커피 추천이 여기에 표시됩니다. 당신의 취향에 맞는 커피 브랜드와 블렌드를 추천해드립니다."
     }
   ];
 
@@ -179,12 +188,12 @@ const ReviewAnalysys = () => {
                     ) : item.id === 1 ? (
                       <div>
                         {/* Coffee Collection Slider */}
-                        <CoffeeCollectionSlider />
+                        <CoffeeCollectionSlider data={aiStory?.sections} />
                       </div>
                     ) : item.id === 2 ? (
                       <div>
                           {/* Other Coffee Slider */}
-                          <OtherCoffeeSlider />
+                          <OtherCoffeeSlider data={similarBlends || []} />
                       </div>
                     ) : (
                       <p className="text-sm text-gray-600 leading-relaxed">

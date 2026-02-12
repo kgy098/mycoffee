@@ -21,14 +21,16 @@ import { useGet } from "@/hooks/useApi";
  export default function MembersListPage() {
    const [search, setSearch] = useState("");
    const [provider, setProvider] = useState("");
+  const [isAdmin, setIsAdmin] = useState("");
  
-   const { data: members = [], isLoading, error } = useGet<AdminUser[]>(
-     ["admin-users", search, provider],
+  const { data: members = [], isLoading, error } = useGet<AdminUser[]>(
+    ["admin-users", search, provider, isAdmin],
      "/api/admin/users",
      {
        params: {
          q: search || undefined,
          provider: provider || undefined,
+        is_admin: isAdmin ? isAdmin === "true" : undefined,
        },
      },
      { refetchOnWindowFocus: false }
@@ -50,15 +52,8 @@ import { useGet } from "@/hooks/useApi";
        />
  
        <div className="rounded-xl border border-white/10 bg-[#141414] p-4">
-         <div className="grid gap-3 md:grid-cols-4">
-           <div>
-             <label className="text-xs text-white/60">검색 구분</label>
-             <select className="mt-1 w-full rounded-lg border border-white/10 bg-transparent px-3 py-2 text-sm text-white/80">
-              <option>이름</option>
-              <option>이메일</option>
-             </select>
-           </div>
-           <div>
+        <div className="grid gap-3 md:grid-cols-3">
+          <div>
              <label className="text-xs text-white/60">가입 채널</label>
             <select
               className="mt-1 w-full rounded-lg border border-white/10 bg-transparent px-3 py-2 text-sm text-white/80"
@@ -72,14 +67,18 @@ import { useGet } from "@/hooks/useApi";
               <option value="apple">애플</option>
             </select>
            </div>
-           <div>
-             <label className="text-xs text-white/60">회원 상태</label>
-             <select className="mt-1 w-full rounded-lg border border-white/10 bg-transparent px-3 py-2 text-sm text-white/80">
-               <option>전체</option>
-               <option>정상</option>
-               <option>탈퇴</option>
-             </select>
-           </div>
+          <div>
+            <label className="text-xs text-white/60">관리자 여부</label>
+            <select
+              className="mt-1 w-full rounded-lg border border-white/10 bg-transparent px-3 py-2 text-sm text-white/80"
+              value={isAdmin}
+              onChange={(event) => setIsAdmin(event.target.value)}
+            >
+              <option value="">전체</option>
+              <option value="true">관리자</option>
+              <option value="false">일반 회원</option>
+            </select>
+          </div>
            <div>
              <label className="text-xs text-white/60">검색</label>
              <input
@@ -94,7 +93,14 @@ import { useGet } from "@/hooks/useApi";
            <button className="rounded-lg bg-white px-4 py-2 text-xs font-semibold text-[#101010]">
              검색
            </button>
-           <button className="rounded-lg border border-white/20 px-4 py-2 text-xs text-white/70">
+          <button
+            className="rounded-lg border border-white/20 px-4 py-2 text-xs text-white/70"
+            onClick={() => {
+              setSearch("");
+              setProvider("");
+              setIsAdmin("");
+            }}
+          >
              검색 초기화
            </button>
          </div>
@@ -122,8 +128,8 @@ import { useGet } from "@/hooks/useApi";
                 `${member.subscription_count}건`,
                 <AdminBadge
                   key={`${member.id}-status`}
-                  label="정상"
-                  tone="success"
+                  label={member.is_admin ? "관리자" : "일반"}
+                  tone={member.is_admin ? "info" : "success"}
                 />,
                 new Date(member.created_at).toLocaleDateString(),
                 <Link

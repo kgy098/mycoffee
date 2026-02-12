@@ -19,10 +19,18 @@ import { useGet } from "@/hooks/useApi";
  
  export default function PaymentsPage() {
    const [status, setStatus] = useState("");
+  const [userId, setUserId] = useState("");
+  const [query, setQuery] = useState("");
    const { data: payments = [], isLoading, error } = useGet<PaymentItem[]>(
-     ["admin-payments", status],
+    ["admin-payments", status, userId, query],
      "/api/admin/payments",
-     { params: { status_filter: status || undefined } },
+    {
+      params: {
+        status_filter: status || undefined,
+        user_id: userId ? Number(userId) : undefined,
+        q: query || undefined,
+      },
+    },
      { refetchOnWindowFocus: false }
    );
  
@@ -58,10 +66,21 @@ import { useGet } from "@/hooks/useApi";
             </select>
            </div>
            <div className="md:col-span-2">
-             <label className="text-xs text-white/60">검색</label>
+            <label className="text-xs text-white/60">회원 ID</label>
+            <input
+              className="mt-1 w-full rounded-lg border border-white/10 bg-transparent px-3 py-2 text-sm text-white/80"
+              placeholder="예: 1"
+              value={userId}
+              onChange={(event) => setUserId(event.target.value)}
+            />
+          </div>
+          <div className="md:col-span-2">
+            <label className="text-xs text-white/60">거래번호</label>
              <input
                className="mt-1 w-full rounded-lg border border-white/10 bg-transparent px-3 py-2 text-sm text-white/80"
-               placeholder="주문번호 또는 고객명"
+              placeholder="transaction_id"
+              value={query}
+              onChange={(event) => setQuery(event.target.value)}
              />
            </div>
          </div>
@@ -69,7 +88,14 @@ import { useGet } from "@/hooks/useApi";
            <button className="rounded-lg bg-white px-4 py-2 text-xs font-semibold text-[#101010]">
              검색
            </button>
-           <button className="rounded-lg border border-white/20 px-4 py-2 text-xs text-white/70">
+          <button
+            className="rounded-lg border border-white/20 px-4 py-2 text-xs text-white/70"
+            onClick={() => {
+              setStatus("");
+              setUserId("");
+              setQuery("");
+            }}
+          >
              검색 초기화
            </button>
          </div>

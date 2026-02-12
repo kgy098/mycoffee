@@ -39,7 +39,7 @@ export default function OrderDetailPage({
 }) {
   const { data: order, isLoading, error } = useGet<OrderDetail>(
     ["admin-order", params.orderId],
-    `/api/orders/${params.orderId}`,
+    `/api/admin/orders/${params.orderId}`,
     undefined,
     { refetchOnWindowFocus: false }
   );

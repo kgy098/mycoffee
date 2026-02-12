@@ -78,6 +78,16 @@ import { useGet } from "@/hooks/useApi";
           >
             조회
           </button>
+          <button
+            className="rounded-lg border border-white/20 px-4 py-2 text-xs text-white/70"
+            onClick={() => {
+              setUserIdInput("");
+              setAppliedUserId(null);
+              setTxnType("all");
+            }}
+          >
+            초기화
+          </button>
         </div>
       </div>
 

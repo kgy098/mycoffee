@@ -1,25 +1,27 @@
- import AdminBadge from "@/components/admin/AdminBadge";
- import AdminPageHeader from "@/components/admin/AdminPageHeader";
- import AdminTable from "@/components/admin/AdminTable";
+"use client";
+
+import AdminBadge from "@/components/admin/AdminBadge";
+import AdminPageHeader from "@/components/admin/AdminPageHeader";
+import AdminTable from "@/components/admin/AdminTable";
+import { useGet } from "@/hooks/useApi";
  
- const members = [
-   {
-     name: "홍길동",
-     product: "벨벳터치블렌드",
-     cycle: "7일",
-     nextPayment: "2026-02-20",
-     status: "정상",
-   },
-   {
-     name: "변사또",
-     product: "콜롬비아 블렌드",
-     cycle: "14일",
-     nextPayment: "2026-02-28",
-     status: "일시정지",
-   },
- ];
+ type SubscriptionMember = {
+   id: number;
+   user_id: number;
+   user_name?: string | null;
+   blend_name?: string | null;
+   status: string;
+   next_billing_date?: string | null;
+ };
  
  export default function SubscriptionMembersPage() {
+   const { data: members = [], isLoading, error } = useGet<SubscriptionMember[]>(
+     ["admin-subscription-members"],
+     "/api/admin/subscriptions",
+     undefined,
+     { refetchOnWindowFocus: false }
+   );
+ 
    return (
      <div className="space-y-6">
        <AdminPageHeader
@@ -29,17 +31,30 @@
  
        <AdminTable
          columns={["회원", "구독 상품", "주기", "다음 결제일", "상태"]}
-         rows={members.map((member, index) => [
-           member.name,
-           member.product,
-           member.cycle,
-           member.nextPayment,
-           <AdminBadge
-             key={`sub-member-${index}`}
-             label={member.status}
-             tone={member.status === "정상" ? "success" : "warning"}
-           />,
-         ])}
+        rows={
+          isLoading
+            ? []
+            : members.map((member) => [
+                member.user_name || `회원 #${member.user_id}`,
+                member.blend_name || "-",
+                "-",
+                member.next_billing_date
+                  ? new Date(member.next_billing_date).toLocaleDateString()
+                  : "-",
+                <AdminBadge
+                  key={`sub-member-${member.id}`}
+                  label={member.status}
+                  tone={member.status === "active" ? "success" : "warning"}
+                />,
+              ])
+        }
+        emptyMessage={
+          isLoading
+            ? "로딩 중..."
+            : error
+            ? "구독 회원 데이터를 불러오지 못했습니다."
+            : "구독 회원이 없습니다."
+        }
        />
      </div>
    );

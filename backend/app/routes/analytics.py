@@ -302,3 +302,52 @@ async def get_similar_blends(
             break
 
     return filtered
+
+
+@router.get("/similar/by-blend/{blend_id}", response_model=List[SimilarBlendResponse])
+async def get_similar_blends_by_blend(
+    blend_id: int,
+    limit: int = 5,
+    db: Session = Depends(get_db)
+):
+    """
+    블렌드 ID 기반 유사 추천 커피 목록 반환
+    """
+    blend = db.query(Blend).filter(Blend.id == blend_id).first()
+    if not blend:
+        raise HTTPException(status_code=404, detail="블렌드를 찾을 수 없습니다")
+
+    user_prefs = TastePreferences(
+        aroma=blend.aroma,
+        acidity=blend.acidity,
+        sweetness=blend.sweetness,
+        body=blend.body,
+        nuttiness=blend.nuttiness,
+    )
+
+    candidates = RecommendationService.get_recommendations(
+        db=db,
+        user_prefs=user_prefs,
+        limit=limit + 2,
+    )
+
+    filtered = []
+    for candidate_blend, similarity in candidates:
+        if candidate_blend.id == blend.id:
+            continue
+        filtered.append(
+            SimilarBlendResponse(
+                id=candidate_blend.id,
+                name=candidate_blend.name,
+                summary=candidate_blend.summary,
+                aroma=candidate_blend.aroma,
+                acidity=candidate_blend.acidity,
+                sweetness=candidate_blend.sweetness,
+                body=candidate_blend.body,
+                nuttiness=candidate_blend.nuttiness,
+                similarity_score=similarity,
+            )
+        )
+        if len(filtered) >= limit:
+            break
+    return filtered

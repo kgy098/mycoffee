@@ -10,13 +10,14 @@ import { useGet } from "@/hooks/useApi";
    blend_name?: string | null;
    user_display_name?: string | null;
    rating?: number | null;
+  status: string;
    created_at: string;
  };
  
  export default function ReviewsPage() {
    const { data: reviews = [], isLoading, error } = useGet<ReviewItem[]>(
      ["admin-reviews"],
-     "/api/reviews",
+    "/api/admin/reviews",
      undefined,
      { refetchOnWindowFocus: false }
    );
@@ -41,8 +42,8 @@ import { useGet } from "@/hooks/useApi";
                 new Date(review.created_at).toLocaleDateString(),
                 <AdminBadge
                   key={`${review.id}-status`}
-                  label="정상"
-                  tone="success"
+                  label={review.status}
+                  tone={review.status === "approved" ? "success" : "warning"}
                 />,
               ])
         }

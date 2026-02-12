@@ -19,10 +19,11 @@ import { useGet } from "@/hooks/useApi";
  
  export default function ShipmentsPage() {
    const [status, setStatus] = useState("");
+  const [query, setQuery] = useState("");
    const { data: shipments = [], isLoading, error } = useGet<ShipmentItem[]>(
-     ["admin-shipments", status],
+    ["admin-shipments", status, query],
      "/api/admin/shipments",
-     { params: { status_filter: status || undefined } },
+    { params: { status_filter: status || undefined, q: query || undefined } },
      { refetchOnWindowFocus: false }
    );
  
@@ -56,19 +57,27 @@ import { useGet } from "@/hooks/useApi";
               <option value="delivered">배송완료</option>
             </select>
            </div>
-           <div className="md:col-span-2">
-             <label className="text-xs text-white/60">검색</label>
-             <input
-               className="mt-1 w-full rounded-lg border border-white/10 bg-transparent px-3 py-2 text-sm text-white/80"
-               placeholder="주문번호 또는 송장번호"
-             />
-           </div>
+          <div className="md:col-span-2">
+            <label className="text-xs text-white/60">송장번호</label>
+            <input
+              className="mt-1 w-full rounded-lg border border-white/10 bg-transparent px-3 py-2 text-sm text-white/80"
+              placeholder="tracking number"
+              value={query}
+              onChange={(event) => setQuery(event.target.value)}
+            />
+          </div>
          </div>
          <div className="mt-4 flex flex-wrap gap-2">
            <button className="rounded-lg bg-white px-4 py-2 text-xs font-semibold text-[#101010]">
              검색
            </button>
-           <button className="rounded-lg border border-white/20 px-4 py-2 text-xs text-white/70">
+          <button
+            className="rounded-lg border border-white/20 px-4 py-2 text-xs text-white/70"
+            onClick={() => {
+              setStatus("");
+              setQuery("");
+            }}
+          >
              검색 초기화
            </button>
            <button className="rounded-lg border border-white/20 px-4 py-2 text-xs text-white/70">

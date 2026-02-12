@@ -1,29 +1,75 @@
- import Link from "next/link";
- import AdminBadge from "@/components/admin/AdminBadge";
- import AdminPageHeader from "@/components/admin/AdminPageHeader";
- import AdminStatCard from "@/components/admin/AdminStatCard";
- import AdminTable from "@/components/admin/AdminTable";
+"use client";
+
+import Link from "next/link";
+import AdminBadge from "@/components/admin/AdminBadge";
+import AdminPageHeader from "@/components/admin/AdminPageHeader";
+import AdminStatCard from "@/components/admin/AdminStatCard";
+import AdminTable from "@/components/admin/AdminTable";
+import { useGet } from "@/hooks/useApi";
  
- const stats = [
-   { label: "오늘 매출", value: "1,000,000원", description: "전일 대비 +6.4%" },
-   { label: "신규 가입 회원", value: "5명", description: "최근 24시간 기준" },
-   { label: "활성 사용자", value: "1,240명", description: "최근 7일 기준" },
-   { label: "배송 진행", value: "84건", description: "배송 준비/배송중" },
- ];
+ type DashboardStats = {
+   today_sales: number;
+   new_members: number;
+   active_users: number;
+   shipping_in_progress: number;
+ };
  
- const newMembers = [
-   { name: "윤광수", date: "2026-02-12", channel: "이메일" },
-   { name: "이순신", date: "2026-02-12", channel: "카카오" },
-   { name: "김영희", date: "2026-02-11", channel: "네이버" },
- ];
+ type NewMember = {
+   id: number;
+   name?: string | null;
+   provider?: string | null;
+   created_at: string;
+ };
  
- const popularCoffee = [
-   { rank: 1, name: "딥 바디 블렌드", status: "판매중" },
-   { rank: 2, name: "벨벳 터치 블렌드", status: "판매중" },
-   { rank: 3, name: "콜롬비아 블렌드", status: "재고부족" },
- ];
+ type PopularCoffee = {
+   blend_id: number;
+   name: string;
+   order_count: number;
+ };
  
  export default function AdminDashboardPage() {
+   const { data: stats } = useGet<DashboardStats>(
+     ["admin-dashboard-stats"],
+     "/api/admin/dashboard/stats",
+     undefined,
+     { refetchOnWindowFocus: false }
+   );
+   const { data: newMembers = [] } = useGet<NewMember[]>(
+     ["admin-dashboard-new-members"],
+     "/api/admin/dashboard/new-members",
+     undefined,
+     { refetchOnWindowFocus: false }
+   );
+   const { data: popularCoffee = [] } = useGet<PopularCoffee[]>(
+     ["admin-dashboard-popular-coffee"],
+     "/api/admin/dashboard/popular-coffee",
+     undefined,
+     { refetchOnWindowFocus: false }
+   );
+ 
+   const statCards = [
+     {
+       label: "오늘 매출",
+       value: `${Number(stats?.today_sales || 0).toLocaleString()}원`,
+       description: "오늘 기준",
+     },
+     {
+       label: "신규 가입 회원",
+       value: `${stats?.new_members || 0}명`,
+       description: "최근 24시간 기준",
+     },
+     {
+       label: "활성 사용자",
+       value: `${stats?.active_users || 0}명`,
+       description: "최근 7일 기준",
+     },
+     {
+       label: "배송 진행",
+       value: `${stats?.shipping_in_progress || 0}건`,
+       description: "배송 준비/배송중",
+     },
+   ];
+ 
    return (
      <div className="space-y-8">
        <AdminPageHeader
@@ -39,11 +85,11 @@
          }
        />
  
-       <section className="grid gap-4 md:grid-cols-2 xl:grid-cols-4">
-         {stats.map((stat) => (
-           <AdminStatCard key={stat.label} {...stat} />
-         ))}
-       </section>
+      <section className="grid gap-4 md:grid-cols-2 xl:grid-cols-4">
+        {statCards.map((stat) => (
+          <AdminStatCard key={stat.label} {...stat} />
+        ))}
+      </section>
  
        <section className="grid gap-6 xl:grid-cols-2">
          <div className="space-y-4">
@@ -53,15 +99,15 @@
                회원 전체보기
              </Link>
            </div>
-           <AdminTable
-             columns={["이름", "가입일시", "가입채널", "상태"]}
-             rows={newMembers.map((member) => [
-               member.name,
-               member.date,
-               member.channel,
-               <AdminBadge key={`${member.name}-status`} label="정상" tone="success" />,
-             ])}
-           />
+          <AdminTable
+            columns={["이름", "가입일시", "가입채널", "상태"]}
+            rows={newMembers.map((member) => [
+              member.name || `회원 #${member.id}`,
+              new Date(member.created_at).toLocaleString(),
+              member.provider || "-",
+              <AdminBadge key={`${member.id}-status`} label="정상" tone="success" />,
+            ])}
+          />
          </div>
  
          <div className="space-y-4">
@@ -71,18 +117,14 @@
                상품 관리로 이동
              </Link>
            </div>
-           <AdminTable
-             columns={["순위", "커피", "상태"]}
-             rows={popularCoffee.map((item) => [
-               `${item.rank}위`,
-               item.name,
-               <AdminBadge
-                 key={`${item.rank}-status`}
-                 label={item.status}
-                 tone={item.status === "판매중" ? "success" : "warning"}
-               />,
-             ])}
-           />
+          <AdminTable
+            columns={["순위", "커피", "주문수"]}
+            rows={popularCoffee.map((item, index) => [
+              `${index + 1}위`,
+              item.name,
+              `${item.order_count}건`,
+            ])}
+          />
          </div>
        </section>
      </div>

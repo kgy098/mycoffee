@@ -1,6 +1,6 @@
  "use client";
  
- import React from "react";
+ import React, { useMemo, useState } from "react";
  import Link from "next/link";
  import { usePathname } from "next/navigation";
  
@@ -68,10 +68,11 @@
      ],
    },
    {
-     title: "운영자 관리",
+    title: "기타 관리",
      items: [
        { label: "관리자 계정", href: "/admin/admins" },
        { label: "접근 로그", href: "/admin/access-logs" },
+      { label: "배너 관리", href: "/admin/banners" },
      ],
    },
  ];
@@ -89,8 +90,9 @@
    { prefix: "/admin/posts", title: "게시글 관리", subtitle: "커뮤니티 게시글" },
    { prefix: "/admin/points", title: "포인트 관리", subtitle: "적립/사용 내역" },
    { prefix: "/admin/rewards", title: "이벤트 리워드", subtitle: "리워드 지급 현황" },
-   { prefix: "/admin/admins", title: "운영자 관리", subtitle: "관리자 계정 및 권한" },
-   { prefix: "/admin/access-logs", title: "접근 로그", subtitle: "관리자 접속 기록" },
+  { prefix: "/admin/admins", title: "관리자 계정", subtitle: "기타 관리 - 계정 및 권한" },
+  { prefix: "/admin/access-logs", title: "접근 로그", subtitle: "기타 관리 - 관리자 접속 기록" },
+  { prefix: "/admin/banners", title: "배너 관리", subtitle: "메인 배너 구성" },
    { prefix: "/admin", title: "대시보드", subtitle: "전체 운영 현황" },
  ];
  
@@ -106,6 +108,9 @@
  export default function AdminShell({ children }: { children: React.ReactNode }) {
    const pathname = usePathname();
    const { title, subtitle } = resolveTitle(pathname);
+  const [openSection, setOpenSection] = useState<string | null>(null);
+
+  const navItems = useMemo(() => navigation, []);
  
    return (
      <div className="min-h-screen bg-[#0f0f0f] text-neutral-100">
@@ -115,34 +120,63 @@
              <p className="text-lg font-semibold text-white">MyCoffee.AI</p>
              <p className="text-xs text-white/50">관리자 콘솔</p>
            </div>
-           <nav className="space-y-6 text-sm">
-             {navigation.map((section) => (
+          <nav className="space-y-4 text-sm">
+            {navItems.map((section) => {
+              const isOpen = openSection === section.title;
+              return (
                <div key={section.title}>
-                 <p className="mb-2 text-xs font-semibold uppercase tracking-wide text-white/40">
-                   {section.title}
-                 </p>
-                 <div className="space-y-1">
-                   {section.items.map((item) => {
-                     const isActive =
-                       pathname === item.href ||
-                       (item.href !== "/admin" && pathname?.startsWith(item.href));
-                     return (
-                       <Link
-                         key={item.href}
-                         href={item.href}
-                         className={`block rounded-lg px-3 py-2 text-sm transition ${
-                           isActive
-                             ? "bg-white/10 text-white"
-                             : "text-white/70 hover:bg-white/5 hover:text-white"
-                         }`}
-                       >
-                         {item.label}
-                       </Link>
-                     );
-                   })}
-                 </div>
-               </div>
-             ))}
+                <button
+                  type="button"
+                  onClick={() =>
+                    setOpenSection((prev) =>
+                      prev === section.title ? null : section.title
+                    )
+                  }
+                  className="flex w-full items-center justify-between rounded-lg px-3 py-2 text-left text-xs font-semibold uppercase tracking-wide text-white/60 hover:bg-white/5"
+                >
+                  <span>{section.title}</span>
+                  <svg
+                    className={`h-3 w-3 transition-transform ${
+                      isOpen ? "rotate-180" : ""
+                    }`}
+                    xmlns="http://www.w3.org/2000/svg"
+                    viewBox="0 0 12 8"
+                    fill="none"
+                  >
+                    <path
+                      d="M10.5 6.5L6 1.5L1.5 6.5"
+                      stroke="currentColor"
+                      strokeWidth="1.5"
+                      strokeLinecap="round"
+                      strokeLinejoin="round"
+                    />
+                  </svg>
+                </button>
+                {isOpen && (
+                  <div className="mt-2 space-y-1 pl-2">
+                    {section.items.map((item) => {
+                      const isActive =
+                        pathname === item.href ||
+                        (item.href !== "/admin" && pathname?.startsWith(item.href));
+                      return (
+                        <Link
+                          key={item.href}
+                          href={item.href}
+                          className={`block rounded-lg px-3 py-2 text-sm transition ${
+                            isActive
+                              ? "bg-white/10 text-white"
+                              : "text-white/70 hover:bg-white/5 hover:text-white"
+                          }`}
+                        >
+                          {item.label}
+                        </Link>
+                      );
+                    })}
+                  </div>
+                )}
+              </div>
+            );
+            })}
            </nav>
          </aside>
  

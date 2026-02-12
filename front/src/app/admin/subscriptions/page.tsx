@@ -9,6 +9,7 @@ import { useGet } from "@/hooks/useApi";
  type SubscriptionItem = {
    id: number;
    user_id: number;
+  user_name?: string | null;
    blend_name?: string | null;
    status: string;
    next_billing_date?: string | null;
@@ -62,6 +63,15 @@ import { useGet } from "@/hooks/useApi";
           >
             조회
           </button>
+          <button
+            className="rounded-lg border border-white/20 px-4 py-2 text-xs text-white/70"
+            onClick={() => {
+              setUserIdInput("");
+              setAppliedUserId(null);
+            }}
+          >
+            초기화
+          </button>
          </div>
        </div>
  
@@ -72,7 +82,7 @@ import { useGet } from "@/hooks/useApi";
             ? []
             : subscriptions.map((item) => [
                 item.id,
-                `회원 #${item.user_id}`,
+                item.user_name || `회원 #${item.user_id}`,
                 item.blend_name || "-",
                 `${item.quantity}개`,
                 item.next_billing_date

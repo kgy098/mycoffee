@@ -23,10 +23,18 @@ import { useGet } from "@/hooks/useApi";
  
  export default function ProductsListPage() {
    const [search, setSearch] = useState("");
+  const [saleStatus, setSaleStatus] = useState("");
   const { data: blends = [], isLoading, error } = useGet<Blend[]>(
     ["admin-blends", search],
     "/api/admin/blends",
-    { params: { skip: 0, limit: 50, q: search || undefined } },
+    {
+      params: {
+        skip: 0,
+        limit: 50,
+        q: search || undefined,
+        is_active: saleStatus ? saleStatus === "active" : undefined,
+      },
+    },
      { refetchOnWindowFocus: false }
    );
  
@@ -48,24 +56,18 @@ import { useGet } from "@/hooks/useApi";
        />
  
        <div className="rounded-xl border border-white/10 bg-[#141414] p-4">
-         <div className="grid gap-3 md:grid-cols-4">
-           <div>
-             <label className="text-xs text-white/60">카테고리</label>
-             <select className="mt-1 w-full rounded-lg border border-white/10 bg-transparent px-3 py-2 text-sm text-white/80">
-               <option>전체</option>
-               <option>단품</option>
-               <option>구독</option>
-               <option>복합</option>
-             </select>
-           </div>
-           <div>
+        <div className="grid gap-3 md:grid-cols-3">
+          <div>
              <label className="text-xs text-white/60">판매 상태</label>
-             <select className="mt-1 w-full rounded-lg border border-white/10 bg-transparent px-3 py-2 text-sm text-white/80">
-               <option>전체</option>
-               <option>판매중</option>
-               <option>품절</option>
-               <option>일시정지</option>
-             </select>
+            <select
+              className="mt-1 w-full rounded-lg border border-white/10 bg-transparent px-3 py-2 text-sm text-white/80"
+              value={saleStatus}
+              onChange={(event) => setSaleStatus(event.target.value)}
+            >
+              <option value="">전체</option>
+              <option value="active">판매중</option>
+              <option value="inactive">중지</option>
+            </select>
            </div>
            <div className="md:col-span-2">
              <label className="text-xs text-white/60">검색</label>
@@ -81,7 +83,13 @@ import { useGet } from "@/hooks/useApi";
            <button className="rounded-lg bg-white px-4 py-2 text-xs font-semibold text-[#101010]">
              검색
            </button>
-           <button className="rounded-lg border border-white/20 px-4 py-2 text-xs text-white/70">
+          <button
+            className="rounded-lg border border-white/20 px-4 py-2 text-xs text-white/70"
+            onClick={() => {
+              setSearch("");
+              setSaleStatus("");
+            }}
+          >
              검색 초기화
            </button>
          </div>

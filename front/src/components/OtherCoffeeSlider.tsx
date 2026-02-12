@@ -1,11 +1,9 @@
 "use client";
 
-import React, { useEffect, useState, useRef } from "react";
+import React from "react";
 import { Swiper, SwiperSlide } from "swiper/react";
-import { Pagination } from "swiper/modules";
 import "swiper/css";
 import "swiper/css/pagination";
-import { CoffeePreferences } from "@/types/coffee";
 import SpiderChart from "@/app/(content-only)/analysis/SpiderChart";
 
 interface TasteRating {
@@ -40,7 +38,7 @@ const OtherCoffeeSlider: React.FC<{ data?: SimilarBlend[] }> = ({ data }) => {
     const coffeeBlends: CoffeeBlend[] = data && data.length > 0
         ? data.map((blend) => ({
             name: blend.name,
-            description: blend.summary || "깔끔한 마무리와 산뜻한 입안 감촉이 좋은 커피입니다.",
+            description: blend.summary || "",
             hashtags: [],
             ratings: {
                 aroma: blend.aroma,
@@ -50,56 +48,15 @@ const OtherCoffeeSlider: React.FC<{ data?: SimilarBlend[] }> = ({ data }) => {
                 nuttiness: blend.nuttiness
             }
         }))
-        : [
-        {
-            name: "벨벳 터치 블렌드",
-            description: "오늘, 깊고 깔끔한 맛을 가진, 마시기 편한 Deep Body Blend가 당신에게 딱 맞습니다.",
-            hashtags: ["씁쓸 달콤", "고소한 맛"],
-            ratings: {
-                aroma: 4,
-                acidity: 3,
-                sweetness: 4,
-                nuttiness: 5,
-                body: 5
-            }
-        },
-        {
-            name: "벨벳 터치 블렌드",
-            description: "깔끔한 마무리와 산뜻한 입안 감촉이 좋은 커피입니다.",
-            hashtags: ["씁쓸 달콤", "고소한 맛"],
-            ratings: {
-                aroma: 5,
-                acidity: 4,
-                sweetness: 4,
-                nuttiness: 3,
-                body: 4
-            }
-        },
-        {
-            name: "벨벳 터치 블렌드 ",
-            description: "깔끔한 마무리와 산뜻한 입안 감촉이 좋은 커피입니다.",
-            hashtags: ["씁쓸 달콤", "고소한 맛"],
-            ratings: {
-                aroma: 5,
-                acidity: 4,
-                sweetness: 4,
-                nuttiness: 3,
-                body: 4
-            }
-        },
-        {
-            name: "벨벳 터치 블렌드 ",
-            description: "깔끔한 마무리와 산뜻한 입안 감촉이 좋은 커피입니다.",
-            hashtags: ["씁쓸 달콤", "고소한 맛", "밸런스"],
-            ratings: {
-                aroma: 5,
-                acidity: 4,
-                sweetness: 4,
-                nuttiness: 3,
-                body: 4
-            }
-        }
-    ];
+        : [];
+
+    if (coffeeBlends.length === 0) {
+        return (
+            <div className="bg-background-sub rounded-lg p-3 border border-border-default text-gray-0">
+                <p className="text-xs text-text-secondary">추천 커피가 없습니다.</p>
+            </div>
+        );
+    }
 
     return (
         <div className="w-full">

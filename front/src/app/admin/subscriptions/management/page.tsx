@@ -1,27 +1,28 @@
- import AdminBadge from "@/components/admin/AdminBadge";
- import AdminPageHeader from "@/components/admin/AdminPageHeader";
- import AdminTable from "@/components/admin/AdminTable";
+"use client";
+
+import AdminBadge from "@/components/admin/AdminBadge";
+import AdminPageHeader from "@/components/admin/AdminPageHeader";
+import AdminTable from "@/components/admin/AdminTable";
+import { useGet } from "@/hooks/useApi";
  
- const managementItems = [
-   {
-     id: "SUB-2301",
-     member: "홍길동",
-     product: "벨벳터치블렌드",
-     status: "배송대기",
-     lastPayment: "2026-02-12",
-     nextShip: "2026-02-15",
-   },
-   {
-     id: "SUB-2302",
-     member: "이영희",
-     product: "홈블렌드",
-     status: "해지요청",
-     lastPayment: "2026-02-10",
-     nextShip: "2026-02-17",
-   },
- ];
+ type ManagementItem = {
+   subscription_id: number;
+   user_id: number;
+   user_name?: string | null;
+   blend_name?: string | null;
+   status: string;
+   last_payment_at?: string | null;
+   next_shipment_at?: string | null;
+ };
  
  export default function SubscriptionManagementPage() {
+   const { data: managementItems = [], isLoading, error } = useGet<ManagementItem[]>(
+     ["admin-subscription-management"],
+     "/api/admin/subscriptions/management",
+     undefined,
+     { refetchOnWindowFocus: false }
+   );
+ 
    return (
      <div className="space-y-6">
        <AdminPageHeader
@@ -31,18 +32,33 @@
  
        <AdminTable
          columns={["구독번호", "회원", "상품", "상태", "최근 결제일", "다음 배송일"]}
-         rows={managementItems.map((item) => [
-           item.id,
-           item.member,
-           item.product,
-           <AdminBadge
-             key={`${item.id}-status`}
-             label={item.status}
-             tone={item.status === "배송대기" ? "info" : "warning"}
-           />,
-           item.lastPayment,
-           item.nextShip,
-         ])}
+        rows={
+          isLoading
+            ? []
+            : managementItems.map((item) => [
+                item.subscription_id,
+                item.user_name || `회원 #${item.user_id}`,
+                item.blend_name || "-",
+                <AdminBadge
+                  key={`${item.subscription_id}-status`}
+                  label={item.status}
+                  tone={item.status === "active" ? "success" : "warning"}
+                />,
+                item.last_payment_at
+                  ? new Date(item.last_payment_at).toLocaleDateString()
+                  : "-",
+                item.next_shipment_at
+                  ? new Date(item.next_shipment_at).toLocaleDateString()
+                  : "-",
+              ])
+        }
+        emptyMessage={
+          isLoading
+            ? "로딩 중..."
+            : error
+            ? "구독 관리 데이터를 불러오지 못했습니다."
+            : "구독 관리 내역이 없습니다."
+        }
        />
      </div>
    );
