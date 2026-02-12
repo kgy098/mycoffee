@@ -57,7 +57,6 @@
      title: "리뷰/커뮤니티 관리",
      items: [
        { label: "리뷰 모니터링", href: "/admin/reviews" },
-       { label: "신고 처리", href: "/admin/reports" },
        { label: "게시글 관리", href: "/admin/posts" },
      ],
    },
@@ -87,7 +86,6 @@
    { prefix: "/admin/shipments", title: "배송 관리", subtitle: "배송 현황 및 처리" },
    { prefix: "/admin/subscriptions", title: "구독 서비스", subtitle: "구독 상품 및 회원" },
    { prefix: "/admin/reviews", title: "리뷰 모니터링", subtitle: "리뷰 품질 관리" },
-   { prefix: "/admin/reports", title: "신고 처리", subtitle: "신고 및 제재 관리" },
    { prefix: "/admin/posts", title: "게시글 관리", subtitle: "커뮤니티 게시글" },
    { prefix: "/admin/points", title: "포인트 관리", subtitle: "적립/사용 내역" },
    { prefix: "/admin/rewards", title: "이벤트 리워드", subtitle: "리워드 지급 현황" },

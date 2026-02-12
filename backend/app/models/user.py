@@ -36,6 +36,7 @@ class User(Base):
     delivery_addresses = relationship("DeliveryAddress", back_populates="user")
     orders = relationship("Order", back_populates="user")
     inquiries = relationship("Inquiry", back_populates="user")
+    access_logs = relationship("AccessLog", back_populates="admin", cascade="all, delete-orphan")
 
     def __repr__(self):
         return f"<User(id={self.id}, email={self.email}, provider={self.provider})>"

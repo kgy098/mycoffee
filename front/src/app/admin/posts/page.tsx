@@ -1,27 +1,26 @@
- import AdminBadge from "@/components/admin/AdminBadge";
- import AdminPageHeader from "@/components/admin/AdminPageHeader";
- import AdminTable from "@/components/admin/AdminTable";
+"use client";
+
+import AdminBadge from "@/components/admin/AdminBadge";
+import AdminPageHeader from "@/components/admin/AdminPageHeader";
+import AdminTable from "@/components/admin/AdminTable";
+import { useGet } from "@/hooks/useApi";
  
- const posts = [
-   {
-     id: "POST-88",
-     category: "커피스토리",
-     title: "오늘의 원두 추천",
-     author: "관리자",
-     date: "2026-02-10",
-     status: "공개",
-   },
-   {
-     id: "POST-89",
-     category: "이벤트",
-     title: "첫 구독 할인 안내",
-     author: "관리자",
-     date: "2026-02-09",
-     status: "예약",
-   },
- ];
+ type PostItem = {
+   id: number;
+   category: string;
+   title: string;
+   created_at: string;
+   status: string;
+ };
  
  export default function PostsPage() {
+   const { data: posts = [], isLoading, error } = useGet<PostItem[]>(
+     ["admin-posts"],
+     "/api/admin/posts",
+     undefined,
+     { refetchOnWindowFocus: false }
+   );
+ 
    return (
      <div className="space-y-6">
        <AdminPageHeader
@@ -31,18 +30,29 @@
  
        <AdminTable
          columns={["게시글ID", "카테고리", "제목", "작성자", "등록일", "상태"]}
-         rows={posts.map((post) => [
-           post.id,
-           post.category,
-           post.title,
-           post.author,
-           post.date,
-           <AdminBadge
-             key={`${post.id}-status`}
-             label={post.status}
-             tone={post.status === "공개" ? "success" : "info"}
-           />,
-         ])}
+        rows={
+          isLoading
+            ? []
+            : posts.map((post) => [
+                post.id,
+                post.category,
+                post.title,
+                "관리자",
+                new Date(post.created_at).toLocaleDateString(),
+                <AdminBadge
+                  key={`${post.id}-status`}
+                  label={post.status}
+                  tone={post.status === "공개" ? "success" : "info"}
+                />,
+              ])
+        }
+        emptyMessage={
+          isLoading
+            ? "로딩 중..."
+            : error
+            ? "게시글 데이터를 불러오지 못했습니다."
+            : "게시글이 없습니다."
+        }
        />
      </div>
    );

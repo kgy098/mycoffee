@@ -25,6 +25,7 @@ from app.models.inquiry import Inquiry
 from app.models.coffee_story import CoffeeStory
 from app.models.coffee_tip import CoffeeTip
 from app.models.event import Event
+from app.models.access_log import AccessLog
 from app.models.score_scale import ScoreScale
 from app.models.user_collection import UserCollection
 from app.models.monthly_coffee import MonthlyCoffee
@@ -53,6 +54,7 @@ __all__ = [
     "CoffeeStory",
     "CoffeeTip",
     "Event",
+    "AccessLog",
     "ScoreScale",
     "UserCollection",
     "MonthlyCoffee",

@@ -1,39 +1,31 @@
- import Link from "next/link";
- import AdminBadge from "@/components/admin/AdminBadge";
- import AdminPageHeader from "@/components/admin/AdminPageHeader";
- import AdminTable from "@/components/admin/AdminTable";
+"use client";
+
+import Link from "next/link";
+import { useState } from "react";
+import AdminBadge from "@/components/admin/AdminBadge";
+import AdminPageHeader from "@/components/admin/AdminPageHeader";
+import AdminTable from "@/components/admin/AdminTable";
+import { useGet } from "@/hooks/useApi";
  
- const payments = [
-   {
-     id: "20260125202020",
-     date: "2026-01-15 12:40",
-     type: "단품",
-     customer: "홍길동",
-     method: "카드",
-     amount: "30,000원",
-     status: "결제완료",
-   },
-   {
-     id: "20260125202021",
-     date: "2026-01-15 13:20",
-     type: "구독",
-     customer: "변사또",
-     method: "카드",
-     amount: "30,000원",
-     status: "결제취소",
-   },
-   {
-     id: "20260125202022",
-     date: "2026-01-15 15:10",
-     type: "구독",
-     customer: "홍길동",
-     method: "카드",
-     amount: "30,000원",
-     status: "환불대기",
-   },
- ];
+ type PaymentItem = {
+   id: number;
+   subscription_id: number;
+   user_id: number;
+   amount: number;
+   status: string;
+   payment_method?: string | null;
+   created_at: string;
+ };
  
  export default function PaymentsPage() {
+   const [status, setStatus] = useState("");
+   const { data: payments = [], isLoading, error } = useGet<PaymentItem[]>(
+     ["admin-payments", status],
+     "/api/admin/payments",
+     { params: { status_filter: status || undefined } },
+     { refetchOnWindowFocus: false }
+   );
+ 
    return (
      <div className="space-y-6">
        <AdminPageHeader
@@ -53,13 +45,17 @@
            </div>
            <div>
              <label className="text-xs text-white/60">상태</label>
-             <select className="mt-1 w-full rounded-lg border border-white/10 bg-transparent px-3 py-2 text-sm text-white/80">
-               <option>전체</option>
-               <option>결제완료</option>
-               <option>결제취소</option>
-               <option>환불대기</option>
-               <option>환불승인</option>
-             </select>
+            <select
+              className="mt-1 w-full rounded-lg border border-white/10 bg-transparent px-3 py-2 text-sm text-white/80"
+              value={status}
+              onChange={(event) => setStatus(event.target.value)}
+            >
+              <option value="">전체</option>
+              <option value="pending">대기</option>
+              <option value="completed">결제완료</option>
+              <option value="failed">결제실패</option>
+              <option value="refunded">환불완료</option>
+            </select>
            </div>
            <div className="md:col-span-2">
              <label className="text-xs text-white/60">검색</label>
@@ -81,32 +77,37 @@
  
        <AdminTable
          columns={["주문번호", "결제일시", "구분", "주문자", "결제수단", "결제금액", "상태", "관리"]}
-         rows={payments.map((payment) => [
-           payment.id,
-           payment.date,
-           payment.type,
-           payment.customer,
-           payment.method,
-           payment.amount,
-           <AdminBadge
-             key={`${payment.id}-status`}
-             label={payment.status}
-             tone={
-               payment.status === "결제완료"
-                 ? "success"
-                 : payment.status === "결제취소"
-                 ? "danger"
-                 : "warning"
-             }
-           />,
-           <Link
-             key={`${payment.id}-link`}
-             href={`/admin/payments/${payment.id}`}
-             className="text-xs text-sky-200 hover:text-sky-100"
-           >
-             상세보기
-           </Link>,
-         ])}
+        rows={
+          isLoading
+            ? []
+            : payments.map((payment) => [
+                payment.id,
+                new Date(payment.created_at).toLocaleString(),
+                "구독",
+                `회원 #${payment.user_id}`,
+                payment.payment_method || "-",
+                `${Number(payment.amount).toLocaleString()}원`,
+                <AdminBadge
+                  key={`${payment.id}-status`}
+                  label={payment.status}
+                  tone={payment.status === "completed" ? "success" : "warning"}
+                />,
+                <Link
+                  key={`${payment.id}-link`}
+                  href={`/admin/payments/${payment.id}`}
+                  className="text-xs text-sky-200 hover:text-sky-100"
+                >
+                  상세보기
+                </Link>,
+              ])
+        }
+        emptyMessage={
+          isLoading
+            ? "로딩 중..."
+            : error
+            ? "결제 데이터를 불러오지 못했습니다."
+            : "결제 내역이 없습니다."
+        }
        />
      </div>
    );

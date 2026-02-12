@@ -1,24 +1,25 @@
- import AdminPageHeader from "@/components/admin/AdminPageHeader";
+"use client";
+
+import AdminPageHeader from "@/components/admin/AdminPageHeader";
 import AdminTable from "@/components/admin/AdminTable";
+import { useGet } from "@/hooks/useApi";
  
- const accessLogs = [
-   {
-     id: "LOG-01",
-     admin: "관리자",
-     ip: "192.168.0.12",
-     action: "로그인",
-     time: "2026-02-12 09:10",
-   },
-   {
-     id: "LOG-02",
-     admin: "운영자",
-     ip: "192.168.0.18",
-     action: "상품 수정",
-     time: "2026-02-11 18:42",
-   },
- ];
+ type AccessLog = {
+   id: number;
+   admin_id: number;
+   action: string;
+   ip_address: string;
+   created_at: string;
+ };
  
  export default function AccessLogsPage() {
+   const { data: logs = [], isLoading, error } = useGet<AccessLog[]>(
+     ["admin-access-logs"],
+     "/api/admin/access-logs",
+     undefined,
+     { refetchOnWindowFocus: false }
+   );
+ 
    return (
      <div className="space-y-6">
        <AdminPageHeader
@@ -28,13 +29,24 @@ import AdminTable from "@/components/admin/AdminTable";
  
        <AdminTable
          columns={["로그ID", "관리자", "IP", "행동", "시간"]}
-         rows={accessLogs.map((log) => [
-           log.id,
-           log.admin,
-           log.ip,
-           log.action,
-           log.time,
-         ])}
+        rows={
+          isLoading
+            ? []
+            : logs.map((log) => [
+                log.id,
+                `관리자 #${log.admin_id}`,
+                log.ip_address,
+                log.action,
+                new Date(log.created_at).toLocaleString(),
+              ])
+        }
+        emptyMessage={
+          isLoading
+            ? "로딩 중..."
+            : error
+            ? "접근 로그를 불러오지 못했습니다."
+            : "접근 로그가 없습니다."
+        }
        />
      </div>
    );

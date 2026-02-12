@@ -1,41 +1,31 @@
- import AdminBadge from "@/components/admin/AdminBadge";
- import AdminPageHeader from "@/components/admin/AdminPageHeader";
- import AdminTable from "@/components/admin/AdminTable";
+"use client";
+
+import { useState } from "react";
+import AdminBadge from "@/components/admin/AdminBadge";
+import AdminPageHeader from "@/components/admin/AdminPageHeader";
+import AdminTable from "@/components/admin/AdminTable";
+import { useGet } from "@/hooks/useApi";
  
- const shipments = [
-   {
-     orderId: "20260125202020",
-     type: "단품",
-     customer: "홍길동",
-     invoice: "20260125202020",
-     product: "벨벳",
-     status: "배송완료",
-     startAt: "2026-01-15",
-     endAt: "2026-01-15",
-   },
-   {
-     orderId: "20260125202021",
-     type: "구독",
-     customer: "변사또",
-     invoice: "20260125202020",
-     product: "벨벳",
-     status: "배송중",
-     startAt: "2026-01-15",
-     endAt: "2026-01-15",
-   },
-   {
-     orderId: "20260125202022",
-     type: "구독",
-     customer: "홍길동",
-     invoice: "20260125202020",
-     product: "벨벳",
-     status: "배송준비중",
-     startAt: "2026-01-15",
-     endAt: "-",
-   },
- ];
+ type ShipmentItem = {
+   id: number;
+   subscription_id: number;
+   user_id: number;
+   blend_name?: string | null;
+   tracking_number?: string | null;
+   status: string;
+   shipped_at?: string | null;
+   delivered_at?: string | null;
+ };
  
  export default function ShipmentsPage() {
+   const [status, setStatus] = useState("");
+   const { data: shipments = [], isLoading, error } = useGet<ShipmentItem[]>(
+     ["admin-shipments", status],
+     "/api/admin/shipments",
+     { params: { status_filter: status || undefined } },
+     { refetchOnWindowFocus: false }
+   );
+ 
    return (
      <div className="space-y-6">
        <AdminPageHeader
@@ -55,12 +45,16 @@
            </div>
            <div>
              <label className="text-xs text-white/60">상태</label>
-             <select className="mt-1 w-full rounded-lg border border-white/10 bg-transparent px-3 py-2 text-sm text-white/80">
-               <option>전체</option>
-               <option>배송준비중</option>
-               <option>배송중</option>
-               <option>배송완료</option>
-             </select>
+            <select
+              className="mt-1 w-full rounded-lg border border-white/10 bg-transparent px-3 py-2 text-sm text-white/80"
+              value={status}
+              onChange={(event) => setStatus(event.target.value)}
+            >
+              <option value="">전체</option>
+              <option value="pending">배송준비중</option>
+              <option value="processing">배송중</option>
+              <option value="delivered">배송완료</option>
+            </select>
            </div>
            <div className="md:col-span-2">
              <label className="text-xs text-white/60">검색</label>
@@ -85,26 +79,35 @@
  
        <AdminTable
          columns={["주문번호", "구분", "주문자", "송장번호", "상품명", "상태", "배송시작", "배송완료"]}
-         rows={shipments.map((shipment) => [
-           shipment.orderId,
-           shipment.type,
-           shipment.customer,
-           shipment.invoice,
-           shipment.product,
-           <AdminBadge
-             key={`${shipment.orderId}-status`}
-             label={shipment.status}
-             tone={
-               shipment.status === "배송완료"
-                 ? "success"
-                 : shipment.status === "배송중"
-                 ? "info"
-                 : "warning"
-             }
-           />,
-           shipment.startAt,
-           shipment.endAt,
-         ])}
+        rows={
+          isLoading
+            ? []
+            : shipments.map((shipment) => [
+                shipment.id,
+                "구독",
+                `회원 #${shipment.user_id}`,
+                shipment.tracking_number || "-",
+                shipment.blend_name || "-",
+                <AdminBadge
+                  key={`${shipment.id}-status`}
+                  label={shipment.status}
+                  tone={shipment.status === "delivered" ? "success" : "warning"}
+                />,
+                shipment.shipped_at
+                  ? new Date(shipment.shipped_at).toLocaleDateString()
+                  : "-",
+                shipment.delivered_at
+                  ? new Date(shipment.delivered_at).toLocaleDateString()
+                  : "-",
+              ])
+        }
+        emptyMessage={
+          isLoading
+            ? "로딩 중..."
+            : error
+            ? "배송 데이터를 불러오지 못했습니다."
+            : "배송 내역이 없습니다."
+        }
        />
      </div>
    );

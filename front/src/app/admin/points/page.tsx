@@ -1,27 +1,57 @@
- import AdminBadge from "@/components/admin/AdminBadge";
- import AdminPageHeader from "@/components/admin/AdminPageHeader";
- import AdminTable from "@/components/admin/AdminTable";
+"use client";
+
+import { useEffect, useState } from "react";
+import AdminBadge from "@/components/admin/AdminBadge";
+import AdminPageHeader from "@/components/admin/AdminPageHeader";
+import AdminTable from "@/components/admin/AdminTable";
+import { useGet } from "@/hooks/useApi";
+import { useUserStore } from "@/stores/user-store";
  
- const points = [
-   {
-     id: "POINT-101",
-     member: "홍길동",
-     type: "적립",
-     amount: "1,000",
-     reason: "구매 적립",
-     date: "2026-02-11",
-   },
-   {
-     id: "POINT-102",
-     member: "이영희",
-     type: "사용",
-     amount: "500",
-     reason: "주문 사용",
-     date: "2026-02-10",
-   },
- ];
+ type PointsTransaction = {
+   id: number;
+   user_id: number;
+   change_amount: number;
+   reason: string;
+   note?: string | null;
+   created_at: string;
+ };
  
  export default function PointsPage() {
+   const userIdFromStore = useUserStore((state) => state.user.data.user_id);
+   const [userIdInput, setUserIdInput] = useState(
+     userIdFromStore ? String(userIdFromStore) : ""
+   );
+   const [appliedUserId, setAppliedUserId] = useState<number | null>(
+     userIdFromStore || null
+   );
+   const [txnType, setTxnType] = useState("all");
+ 
+   const { data: transactions = [], isLoading, error } = useGet<PointsTransaction[]>(
+     ["admin-points", appliedUserId, txnType],
+     "/api/points/transactions",
+     {
+       params: {
+         user_id: appliedUserId ?? undefined,
+         txn_type: txnType,
+       },
+     },
+     {
+       enabled: Boolean(appliedUserId),
+       refetchOnWindowFocus: false,
+     }
+   );
+ 
+   useEffect(() => {
+     if (!appliedUserId && userIdFromStore) {
+       setAppliedUserId(userIdFromStore);
+     }
+   }, [appliedUserId, userIdFromStore]);
+ 
+   const applyFilter = () => {
+     const nextId = Number(userIdInput);
+     setAppliedUserId(Number.isNaN(nextId) || nextId <= 0 ? null : nextId);
+   };
+ 
    return (
      <div className="space-y-6">
        <AdminPageHeader
@@ -29,20 +59,68 @@
          description="회원 포인트 내역을 관리합니다."
        />
  
+      <div className="rounded-xl border border-white/10 bg-[#141414] p-4">
+        <div className="grid gap-3 md:grid-cols-4">
+          <div>
+            <label className="text-xs text-white/60">조회할 회원 ID</label>
+            <input
+              className="mt-1 w-full rounded-lg border border-white/10 bg-transparent px-3 py-2 text-sm text-white/80"
+              placeholder="예: 1"
+              value={userIdInput}
+              onChange={(event) => setUserIdInput(event.target.value)}
+            />
+          </div>
+          <div>
+            <label className="text-xs text-white/60">구분</label>
+            <select
+              className="mt-1 w-full rounded-lg border border-white/10 bg-transparent px-3 py-2 text-sm text-white/80"
+              value={txnType}
+              onChange={(event) => setTxnType(event.target.value)}
+            >
+              <option value="all">전체</option>
+              <option value="earned">적립</option>
+              <option value="used">사용</option>
+              <option value="canceled">취소/환불</option>
+            </select>
+          </div>
+        </div>
+        <div className="mt-4 flex flex-wrap gap-2">
+          <button
+            className="rounded-lg bg-white px-4 py-2 text-xs font-semibold text-[#101010]"
+            onClick={applyFilter}
+          >
+            조회
+          </button>
+        </div>
+      </div>
+
        <AdminTable
          columns={["내역ID", "회원", "구분", "포인트", "사유", "일자"]}
-         rows={points.map((point) => [
-           point.id,
-           point.member,
-           <AdminBadge
-             key={`${point.id}-type`}
-             label={point.type}
-             tone={point.type === "적립" ? "success" : "warning"}
-           />,
-           `${point.amount}P`,
-           point.reason,
-           point.date,
-         ])}
+        rows={
+          isLoading
+            ? []
+            : transactions.map((point) => [
+                point.id,
+                `회원 #${point.user_id}`,
+                <AdminBadge
+                  key={`${point.id}-type`}
+                  label={point.change_amount >= 0 ? "적립" : "사용"}
+                  tone={point.change_amount >= 0 ? "success" : "warning"}
+                />,
+                `${Math.abs(point.change_amount).toLocaleString()}P`,
+                point.reason,
+                new Date(point.created_at).toLocaleDateString(),
+              ])
+        }
+        emptyMessage={
+          isLoading
+            ? "로딩 중..."
+            : error
+            ? "포인트 데이터를 불러오지 못했습니다."
+            : appliedUserId
+            ? "내역이 없습니다."
+            : "회원 ID를 입력해주세요."
+        }
        />
      </div>
    );

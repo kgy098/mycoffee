@@ -1,56 +1,39 @@
- import Link from "next/link";
- import AdminBadge from "@/components/admin/AdminBadge";
- import AdminPageHeader from "@/components/admin/AdminPageHeader";
- import AdminTable from "@/components/admin/AdminTable";
+"use client";
+
+import Link from "next/link";
+import { useState } from "react";
+import AdminBadge from "@/components/admin/AdminBadge";
+import AdminPageHeader from "@/components/admin/AdminPageHeader";
+import AdminTable from "@/components/admin/AdminTable";
+import { useGet } from "@/hooks/useApi";
  
- const members = [
-   {
-     id: "1001",
-     name: "박회원",
-     email: "abc@gmail.com",
-     phone: "010-1111-2222",
-     channel: "이메일",
-     points: "1,000",
-     subscriptions: 1,
-     status: "정상",
-     joinedAt: "2026-01-30 05:30",
-   },
-   {
-     id: "1002",
-     name: "김회원",
-     email: "abc@gmail.com",
-     phone: "010-1111-2222",
-     channel: "카카오",
-     points: "1,000",
-     subscriptions: 0,
-     status: "정상",
-     joinedAt: "2026-01-30 05:30",
-   },
-   {
-     id: "1003",
-     name: "이회원",
-     email: "abc@gmail.com",
-     phone: "010-1111-2222",
-     channel: "카카오",
-     points: "1,000",
-     subscriptions: 0,
-     status: "탈퇴",
-     joinedAt: "2026-01-30 05:30",
-   },
-   {
-     id: "1004",
-     name: "최회원",
-     email: "abc@gmail.com",
-     phone: "010-1111-2222",
-     channel: "네이버",
-     points: "1,000",
-     subscriptions: 1,
-     status: "정상",
-     joinedAt: "2026-01-30 05:30",
-   },
- ];
+ type AdminUser = {
+   id: number;
+   email: string;
+   display_name?: string | null;
+   phone_number?: string | null;
+   provider?: string | null;
+   is_admin: boolean;
+   created_at: string;
+   subscription_count: number;
+ };
  
  export default function MembersListPage() {
+   const [search, setSearch] = useState("");
+   const [provider, setProvider] = useState("");
+ 
+   const { data: members = [], isLoading, error } = useGet<AdminUser[]>(
+     ["admin-users", search, provider],
+     "/api/admin/users",
+     {
+       params: {
+         q: search || undefined,
+         provider: provider || undefined,
+       },
+     },
+     { refetchOnWindowFocus: false }
+   );
+ 
    return (
      <div className="space-y-6">
        <AdminPageHeader
@@ -71,20 +54,23 @@
            <div>
              <label className="text-xs text-white/60">검색 구분</label>
              <select className="mt-1 w-full rounded-lg border border-white/10 bg-transparent px-3 py-2 text-sm text-white/80">
-               <option>이름</option>
-               <option>전화번호</option>
-               <option>이메일</option>
+              <option>이름</option>
+              <option>이메일</option>
              </select>
            </div>
            <div>
              <label className="text-xs text-white/60">가입 채널</label>
-             <select className="mt-1 w-full rounded-lg border border-white/10 bg-transparent px-3 py-2 text-sm text-white/80">
-               <option>전체</option>
-               <option>이메일</option>
-               <option>카카오</option>
-               <option>네이버</option>
-               <option>애플</option>
-             </select>
+            <select
+              className="mt-1 w-full rounded-lg border border-white/10 bg-transparent px-3 py-2 text-sm text-white/80"
+              value={provider}
+              onChange={(event) => setProvider(event.target.value)}
+            >
+              <option value="">전체</option>
+              <option value="email">이메일</option>
+              <option value="kakao">카카오</option>
+              <option value="naver">네이버</option>
+              <option value="apple">애플</option>
+            </select>
            </div>
            <div>
              <label className="text-xs text-white/60">회원 상태</label>
@@ -99,6 +85,8 @@
              <input
                className="mt-1 w-full rounded-lg border border-white/10 bg-transparent px-3 py-2 text-sm text-white/80"
                placeholder="이름 또는 이메일"
+              value={search}
+              onChange={(event) => setSearch(event.target.value)}
              />
            </div>
          </div>
@@ -118,33 +106,42 @@
            "이메일",
            "전화번호",
            "가입채널",
-           "포인트",
            "구독수",
            "상태",
            "가입일시",
            "관리",
          ]}
-         rows={members.map((member) => [
-           member.name,
-           member.email,
-           member.phone,
-           member.channel,
-           member.points,
-           `${member.subscriptions}건`,
-           <AdminBadge
-             key={`${member.id}-status`}
-             label={member.status}
-             tone={member.status === "정상" ? "success" : "danger"}
-           />,
-           member.joinedAt,
-           <Link
-             key={`${member.id}-link`}
-             href={`/admin/members/${member.id}`}
-             className="text-xs text-sky-200 hover:text-sky-100"
-           >
-             상세보기
-           </Link>,
-         ])}
+        rows={
+          isLoading
+            ? []
+            : members.map((member) => [
+                member.display_name || "-",
+                member.email,
+                member.phone_number || "-",
+                member.provider || "-",
+                `${member.subscription_count}건`,
+                <AdminBadge
+                  key={`${member.id}-status`}
+                  label="정상"
+                  tone="success"
+                />,
+                new Date(member.created_at).toLocaleDateString(),
+                <Link
+                  key={`${member.id}-link`}
+                  href={`/admin/members/${member.id}`}
+                  className="text-xs text-sky-200 hover:text-sky-100"
+                >
+                  상세보기
+                </Link>,
+              ])
+        }
+        emptyMessage={
+          isLoading
+            ? "로딩 중..."
+            : error
+            ? "회원 데이터를 불러오지 못했습니다."
+            : "회원이 없습니다."
+        }
        />
      </div>
    );

@@ -1,54 +1,39 @@
- import Link from "next/link";
- import AdminBadge from "@/components/admin/AdminBadge";
- import AdminPageHeader from "@/components/admin/AdminPageHeader";
- import AdminTable from "@/components/admin/AdminTable";
+"use client";
+
+import Link from "next/link";
+import { useState } from "react";
+import AdminBadge from "@/components/admin/AdminBadge";
+import AdminPageHeader from "@/components/admin/AdminPageHeader";
+import AdminTable from "@/components/admin/AdminTable";
+import { useGet } from "@/hooks/useApi";
  
- const products = [
-   {
-     id: "2001",
-     name: "벨벳터치블렌드",
-     aroma: 2,
-     acidity: 3,
-     sweetness: 5,
-     body: 1,
-     nutty: 2,
-     price: "30,000",
-     type: "단품",
-     stock: "99,999",
-     status: "판매중",
-     createdAt: "2026-01-15",
-   },
-   {
-     id: "2002",
-     name: "벨벳터치블렌드",
-     aroma: 3,
-     acidity: 4,
-     sweetness: 5,
-     body: 5,
-     nutty: 5,
-     price: "30,000",
-     type: "구독가능",
-     stock: "80,001",
-     status: "판매중",
-     createdAt: "2026-01-15",
-   },
-   {
-     id: "2003",
-     name: "벨벳터치블렌드",
-     aroma: 3,
-     acidity: 4,
-     sweetness: 5,
-     body: 5,
-     nutty: 5,
-     price: "30,000",
-     type: "복합",
-     stock: "99,999",
-     status: "일시정지",
-     createdAt: "2026-01-15",
-   },
- ];
+ type Blend = {
+   id: number;
+   name: string;
+   aroma?: number;
+   acidity?: number;
+   sweetness?: number;
+   body?: number;
+   nuttiness?: number;
+   price?: number | null;
+   stock?: number | null;
+   is_active?: boolean;
+   created_at?: string;
+ };
  
  export default function ProductsListPage() {
+   const [search, setSearch] = useState("");
+   const { data: blends = [], isLoading, error } = useGet<Blend[]>(
+     ["admin-blends"],
+     "/api/blends",
+     { params: { skip: 0, limit: 50 } },
+     { refetchOnWindowFocus: false }
+   );
+ 
+   const filtered = blends.filter((blend) =>
+     blend.name?.toLowerCase().includes(search.toLowerCase())
+   );
+ 
    return (
      <div className="space-y-6">
        <AdminPageHeader
@@ -89,6 +74,8 @@
              <input
                className="mt-1 w-full rounded-lg border border-white/10 bg-transparent px-3 py-2 text-sm text-white/80"
                placeholder="상품명을 입력하세요"
+              value={search}
+              onChange={(event) => setSearch(event.target.value)}
              />
            </div>
          </div>
@@ -107,32 +94,43 @@
            "상품명",
            "맛 프로파일",
            "가격",
-           "판매타입",
            "재고상태",
            "상태",
            "등록일",
            "관리",
          ]}
-         rows={products.map((product) => [
-           product.name,
-           `향 ${product.aroma} · 산미 ${product.acidity} · 단맛 ${product.sweetness} · 바디 ${product.body} · 고소함 ${product.nutty}`,
-           `${product.price}원`,
-           product.type,
-           product.stock,
-           <AdminBadge
-             key={`${product.id}-status`}
-             label={product.status}
-             tone={product.status === "판매중" ? "success" : "warning"}
-           />,
-           product.createdAt,
-           <Link
-             key={`${product.id}-link`}
-             href={`/admin/products/${product.id}`}
-             className="text-xs text-sky-200 hover:text-sky-100"
-           >
-             상세보기
-           </Link>,
-         ])}
+        rows={
+          isLoading
+            ? []
+            : filtered.map((product) => [
+                product.name,
+                `향 ${product.aroma ?? "-"} · 산미 ${product.acidity ?? "-"} · 단맛 ${
+                  product.sweetness ?? "-"
+                } · 바디 ${product.body ?? "-"} · 고소함 ${product.nuttiness ?? "-"}`,
+                product.price ? `${Number(product.price).toLocaleString()}원` : "-",
+                product.stock ?? "-",
+                <AdminBadge
+                  key={`${product.id}-status`}
+                  label={product.is_active ? "판매중" : "중지"}
+                  tone={product.is_active ? "success" : "warning"}
+                />,
+                product.created_at ? new Date(product.created_at).toLocaleDateString() : "-",
+                <Link
+                  key={`${product.id}-link`}
+                  href={`/admin/products/${product.id}`}
+                  className="text-xs text-sky-200 hover:text-sky-100"
+                >
+                  상세보기
+                </Link>,
+              ])
+        }
+        emptyMessage={
+          isLoading
+            ? "로딩 중..."
+            : error
+            ? "상품 데이터를 불러오지 못했습니다."
+            : "등록된 상품이 없습니다."
+        }
        />
      </div>
    );

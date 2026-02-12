@@ -1,27 +1,25 @@
- import AdminBadge from "@/components/admin/AdminBadge";
- import AdminPageHeader from "@/components/admin/AdminPageHeader";
- import AdminTable from "@/components/admin/AdminTable";
+"use client";
+
+import AdminBadge from "@/components/admin/AdminBadge";
+import AdminPageHeader from "@/components/admin/AdminPageHeader";
+import AdminTable from "@/components/admin/AdminTable";
+import { useGet } from "@/hooks/useApi";
  
- const admins = [
-   {
-     id: "ADM-01",
-     name: "관리자",
-     email: "admin@mycoffee.ai",
-     role: "총괄 관리자",
-     status: "활성",
-     lastLogin: "2026-02-12 09:10",
-   },
-   {
-     id: "ADM-02",
-     name: "운영자",
-     email: "ops@mycoffee.ai",
-     role: "운영",
-     status: "활성",
-     lastLogin: "2026-02-11 18:40",
-   },
- ];
+ type AdminUser = {
+   id: number;
+   email: string;
+   display_name?: string | null;
+   created_at: string;
+ };
  
  export default function AdminAccountsPage() {
+   const { data: admins = [], isLoading, error } = useGet<AdminUser[]>(
+     ["admin-admins"],
+     "/api/admin/admins",
+     undefined,
+     { refetchOnWindowFocus: false }
+   );
+ 
    return (
      <div className="space-y-6">
        <AdminPageHeader
@@ -31,18 +29,25 @@
  
        <AdminTable
          columns={["계정ID", "이름", "이메일", "권한", "상태", "최근 접속"]}
-         rows={admins.map((admin) => [
-           admin.id,
-           admin.name,
-           admin.email,
-           admin.role,
-           <AdminBadge
-             key={`${admin.id}-status`}
-             label={admin.status}
-             tone="success"
-           />,
-           admin.lastLogin,
-         ])}
+        rows={
+          isLoading
+            ? []
+            : admins.map((admin) => [
+                admin.id,
+                admin.display_name || "-",
+                admin.email,
+                "관리자",
+                <AdminBadge key={`${admin.id}-status`} label="활성" tone="success" />,
+                new Date(admin.created_at).toLocaleDateString(),
+              ])
+        }
+        emptyMessage={
+          isLoading
+            ? "로딩 중..."
+            : error
+            ? "관리자 계정을 불러오지 못했습니다."
+            : "등록된 관리자 계정이 없습니다."
+        }
        />
      </div>
    );
