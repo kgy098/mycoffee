@@ -1,10 +1,14 @@
 """Analytics routes for taste analysis details"""
+import json
+import logging
+import time
 from fastapi import APIRouter, Depends, HTTPException
 from sqlalchemy.orm import Session
 from typing import List, Optional, Any
-import json
 
 from app.database import get_db
+
+logger = logging.getLogger(__name__)
 from app.models import AnalysisResult, Blend, BlendOrigin, AiStory
 from app.schemas.recommendation import TastePreferences
 from app.services.recommendation import RecommendationService
@@ -144,20 +148,28 @@ async def get_ai_story(
     - ai_stories 테이블에 있으면 그대로 반환 (취향분석 상세/컬렉션 상세 공통).
     - 없으면 취향분석 상세에서만 생성·저장 후 반환. 컬렉션은 analysis_result_id로 조회만.
     """
+    t0 = time.perf_counter()
+    logger.info("[PERF] analytics.ai_story result_id=%s stage=start", result_id)
+
     result = db.query(AnalysisResult).filter(AnalysisResult.id == result_id).first()
     if not result:
         raise HTTPException(status_code=404, detail="분석 결과를 찾을 수 없습니다")
+    logger.info("[PERF] analytics.ai_story result_id=%s stage=analysis_result_query elapsed_ms=%.1f", result_id, (time.perf_counter() - t0) * 1000)
 
     # 1) ai_stories 테이블 조회 (저장된 스토리 우선)
     row = db.query(AiStory).filter(AiStory.analysis_result_id == result_id).first()
+    logger.info("[PERF] analytics.ai_story result_id=%s stage=ai_stories_query elapsed_ms=%.1f", result_id, (time.perf_counter() - t0) * 1000)
     if row and row.sections:
         sections = _normalize_story(row.sections)
         if sections:
+            logger.info("[PERF] analytics.ai_story result_id=%s stage=return_from_ai_stories total_elapsed_ms=%.1f", result_id, (time.perf_counter() - t0) * 1000)
             return AiStoryResponse(sections=sections)
 
     # 2) 구 데이터 호환: analysis_results.interpretation
     story_sections = _normalize_story(result.interpretation)
+    logger.info("[PERF] analytics.ai_story result_id=%s stage=interpretation_check elapsed_ms=%.1f", result_id, (time.perf_counter() - t0) * 1000)
     if story_sections:
+        logger.info("[PERF] analytics.ai_story result_id=%s stage=return_from_interpretation total_elapsed_ms=%.1f", result_id, (time.perf_counter() - t0) * 1000)
         return AiStoryResponse(sections=story_sections)
 
     # 3) 없으면 생성 후 ai_stories에 저장 (취향분석 상세 진입 시 1회)
@@ -172,8 +184,10 @@ async def get_ai_story(
                 .order_by(BlendOrigin.display_order.asc(), BlendOrigin.id.asc())
                 .all()
             )
+    logger.info("[PERF] analytics.ai_story result_id=%s stage=blend_origins elapsed_ms=%.1f", result_id, (time.perf_counter() - t0) * 1000)
 
     if blend:
+        t_openai = time.perf_counter()
         generated = generate_ai_story(
             blend_name=blend.name,
             summary=blend.summary or "",
@@ -184,6 +198,7 @@ async def get_ai_story(
             nuttiness=result.nuttiness,
             origin_text=_get_origin_text(origins),
         )
+        logger.info("[PERF] analytics.ai_story result_id=%s stage=openai_generate openai_elapsed_ms=%.1f total_elapsed_ms=%.1f", result_id, (time.perf_counter() - t_openai) * 1000, (time.perf_counter() - t0) * 1000)
         if generated:
             story_sections = [AiStorySection(**s) for s in generated]
             try:
@@ -195,9 +210,11 @@ async def get_ai_story(
                 db.commit()
             except Exception:
                 db.rollback()
+            logger.info("[PERF] analytics.ai_story result_id=%s stage=return_from_generated total_elapsed_ms=%.1f", result_id, (time.perf_counter() - t0) * 1000)
             return AiStoryResponse(sections=story_sections)
 
     story_sections = _build_default_story(origins)
+    logger.info("[PERF] analytics.ai_story result_id=%s stage=return_default total_elapsed_ms=%.1f", result_id, (time.perf_counter() - t0) * 1000)
     return AiStoryResponse(sections=story_sections)
 
 

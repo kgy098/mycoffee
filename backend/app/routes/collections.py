@@ -1,10 +1,14 @@
 """User collection routes"""
+import logging
+import time
 from fastapi import APIRouter, Depends, HTTPException, Query
 from sqlalchemy.orm import Session
 from typing import List, Optional
 from datetime import datetime
 
 from app.database import get_db
+
+logger = logging.getLogger(__name__)
 from app.models import UserCollection, Blend, BlendOrigin, AnalysisResult
 from pydantic import BaseModel
 
@@ -143,9 +147,13 @@ async def get_collection_detail(
     collection_id: int,
     db: Session = Depends(get_db)
 ):
+    t0 = time.perf_counter()
+    logger.info("[PERF] collections.get_detail collection_id=%s stage=start", collection_id)
+
     collection = db.query(UserCollection).filter(UserCollection.id == collection_id).first()
     if not collection:
         raise HTTPException(status_code=404, detail="컬렉션을 찾을 수 없습니다.")
+    logger.info("[PERF] collections.get_detail collection_id=%s stage=collection_query elapsed_ms=%.1f", collection_id, (time.perf_counter() - t0) * 1000)
 
     blend = db.query(Blend).filter(Blend.id == collection.blend_id).first()
     origins = []
@@ -156,6 +164,7 @@ async def get_collection_detail(
             .order_by(BlendOrigin.display_order.asc(), BlendOrigin.id.asc())
             .all()
         )
+    logger.info("[PERF] collections.get_detail collection_id=%s stage=blend_origins elapsed_ms=%.1f", collection_id, (time.perf_counter() - t0) * 1000)
 
     origin_summary = None
     if origins:
@@ -166,6 +175,7 @@ async def get_collection_detail(
 
     if collection.analysis_result_id:
         analysis = db.query(AnalysisResult).filter(AnalysisResult.id == collection.analysis_result_id).first()
+        logger.info("[PERF] collections.get_detail collection_id=%s stage=analysis_result elapsed_ms=%.1f", collection_id, (time.perf_counter() - t0) * 1000)
         if analysis:
             taste_profile = {
                 "aroma": analysis.aroma,
@@ -190,6 +200,7 @@ async def get_collection_detail(
             "thumbnail_url": blend.thumbnail_url,
         }
 
+    logger.info("[PERF] collections.get_detail collection_id=%s stage=done total_elapsed_ms=%.1f", collection_id, (time.perf_counter() - t0) * 1000)
     return CollectionDetailResponse(
         id=collection.id,
         collection_name=collection.collection_name,
