@@ -23,7 +23,11 @@ class Subscription(Base):
     start_date = Column(Date, nullable=False)
     next_billing_date = Column(Date, nullable=True, index=True)
     billing_cycle = Column(Enum("monthly"), default="monthly")
-    status = Column(Enum(SubscriptionStatus), default=SubscriptionStatus.ACTIVE, index=True)
+    status = Column(
+        Enum(SubscriptionStatus, values_callable=lambda x: [e.value for e in x]),
+        default=SubscriptionStatus.ACTIVE,
+        index=True,
+    )
     pause_until = Column(Date, nullable=True)
     payment_method = Column(String(64), nullable=True)
     total_amount = Column(Numeric(10, 2), nullable=True)
