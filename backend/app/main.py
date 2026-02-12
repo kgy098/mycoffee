@@ -1,9 +1,22 @@
 """Main FastAPI application"""
+import logging
+import sys
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 from app.config import get_settings
 from app.routes import blends, health, score_scales, taste_histories, auth, monthly_coffees, recommendations, analysis_results, analytics
 from app.routes import collections, points, delivery_addresses, orders, subscriptions, reviews, community, inquiries, user_consents
+
+# [PERF] 등 앱 로그가 journalctl에 보이도록 stdout 핸들러 설정
+logging.basicConfig(
+    level=logging.INFO,
+    format="%(asctime)s %(levelname)s %(name)s %(message)s",
+    datefmt="%Y-%m-%d %H:%M:%S",
+    stream=sys.stdout,
+    force=True,
+)
+# uvicorn 접근 로그 레벨은 그대로 두기 위해
+logging.getLogger("uvicorn.access").setLevel(logging.WARNING)
 
 settings = get_settings()
 

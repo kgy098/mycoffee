@@ -25,7 +25,11 @@ class Review(Base):
     content = Column(Text, nullable=True)
     photo_url = Column(String(1024), nullable=True)
     
-    status = Column(Enum(ReviewStatus), default=ReviewStatus.PENDING, index=True)
+    status = Column(
+        Enum(ReviewStatus, values_callable=lambda x: [e.value for e in x]),
+        default=ReviewStatus.PENDING,
+        index=True,
+    )
     points_awarded = Column(Boolean, default=False)
     
     moderated_by = Column(Integer, ForeignKey("users.id", ondelete="SET NULL"), nullable=True)
