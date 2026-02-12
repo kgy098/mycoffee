@@ -51,6 +51,16 @@ export default function MyCoffeeLayout({
     return tabs.findIndex(t => t.value === tab);
   };
 
+  const safeUpdateAutoHeight = (s: typeof swiper) => {
+    try {
+      if (s?.params?.slidesPerView != null && typeof s.updateAutoHeight === "function") {
+        s.updateAutoHeight();
+      }
+    } catch {
+      // Swiper 내부 초기화 전/해제 후 호출 시 무시
+    }
+  };
+
   useEffect(() => {
     const tabFromPath = getCurrentTab();
     if (tabFromPath !== currentTab) {
@@ -59,12 +69,7 @@ export default function MyCoffeeLayout({
       if (swiper && isMainTabRoute()) {
         const index = getTabIndex(tabFromPath);
         swiper.slideTo(index);
-        // Update height after slide change
-        setTimeout(() => {
-          if (swiper && swiper.updateAutoHeight) {
-            swiper.updateAutoHeight();
-          }
-        }, 50);
+        setTimeout(() => safeUpdateAutoHeight(swiper), 50);
       }
     }
   }, [pathname]);
@@ -90,13 +95,7 @@ export default function MyCoffeeLayout({
     if (swiper) {
       const index = getTabIndex(tab);
       swiper.slideTo(index);
-      
-      // Update height after slide change
-      setTimeout(() => {
-        if (swiper && swiper.updateAutoHeight) {
-          swiper.updateAutoHeight();
-        }
-      }, 100);
+      setTimeout(() => safeUpdateAutoHeight(swiper), 100);
     }
   };
 
@@ -110,12 +109,7 @@ export default function MyCoffeeLayout({
       router.push(`/my-coffee/${newTab.value}`, { scroll: false });
     }
     
-    // Update swiper height when slide changes
-    setTimeout(() => {
-      if (swiper && swiper.updateAutoHeight) {
-        swiper.updateAutoHeight();
-      }
-    }, 100);
+    setTimeout(() => safeUpdateAutoHeight(swiper), 100);
   };
 
   const { setHeader } = useHeaderStore();

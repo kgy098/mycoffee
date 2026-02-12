@@ -155,6 +155,7 @@ const CollectionPage = () => {
                   <Link
                     href={`/my-coffee/collection/${analysis.id}`}
                     className="btn-action text-center"
+                    prefetch={false}
                   >
                     주문하기
                   </Link>
