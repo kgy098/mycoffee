@@ -6,6 +6,7 @@ import { useOrderStore } from "@/stores/order-store";
 import { useGet, usePost } from "@/hooks/useApi";
 import { useUserStore } from "@/stores/user-store";
 import { useRouter, useSearchParams } from "next/navigation";
+import { requestTossPayment } from "@/lib/toss-payments";
 
 const PurchaseSubscription = () => {
   const { setHeader } = useHeaderStore();
@@ -107,8 +108,23 @@ const PurchaseSubscription = () => {
   const availablePoints = pointsBalance?.balance ?? 0;
 
   const { mutate: createSubscription, isPending } = usePost("/api/subscriptions", {
-    onSuccess: (data: any) => {
-      router.push(`/success-order?subscriptionId=${data?.id ?? ""}`);
+    onSuccess: async (data: any) => {
+      const subscriptionId = data?.id;
+      if (!subscriptionId) {
+        router.push("/payment/fail");
+        return;
+      }
+      const orderId = `SUB-${subscriptionId}`;
+      try {
+        await requestTossPayment({
+          orderId,
+          amount: totalPrice,
+          orderName: "My Coffee.AI 구독 결제",
+        });
+      } catch (err) {
+        console.error("Toss payment request failed:", err);
+        router.push("/payment/fail");
+      }
     },
   });
 
@@ -179,7 +195,7 @@ const PurchaseSubscription = () => {
       user_id: userId,
       blend_id: currentMeta.blend_id,
       delivery_address_id: selectedAddress.id,
-      payment_method: "card",
+      payment_method: "toss",
       total_amount: totalPrice,
       quantity,
       total_cycles: subscriptionInfo.total_cycles,

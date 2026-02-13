@@ -27,6 +27,9 @@ class Settings(BaseSettings):
     # OpenAI (AI 스토리 생성, 없으면 기본 문구 사용)
     openai_api_key: str = ""
 
+    # 토스페이먼츠 (test_sk_ 또는 live_sk_ 시크릿 키)
+    toss_secret_key: str = ""
+
     class Config:
         env_file = ".env.local"
         case_sensitive = False

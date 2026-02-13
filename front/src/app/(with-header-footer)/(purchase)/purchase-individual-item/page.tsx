@@ -6,6 +6,7 @@ import { useOrderStore } from "@/stores/order-store";
 import { useGet, usePost } from "@/hooks/useApi";
 import { useUserStore } from "@/stores/user-store";
 import { useRouter } from "next/navigation";
+import { requestTossPayment } from "@/lib/toss-payments";
 const PurchaseIndividualItem = () => {
 
   const order = useOrderStore((state) => state.order);
@@ -125,8 +126,22 @@ const PurchaseIndividualItem = () => {
   const isOrderReady = order.length > 0 && order.every((item) => !!item.blend_id);
 
   const { mutate: orderSingle, isPending: isCreatingOrder } = usePost("/api/orders/single", {
-    onSuccess: (data: any) => {
-      router.push(`/success-order?orderId=${data?.id ?? ""}`);
+    onSuccess: async (data: any) => {
+      const orderNumber = data?.order_number;
+      if (!orderNumber) {
+        router.push("/payment/fail");
+        return;
+      }
+      try {
+        await requestTossPayment({
+          orderId: orderNumber,
+          amount: totalPrice,
+          orderName: "My Coffee.AI 단건 주문",
+        });
+      } catch (err) {
+        console.error("Toss payment request failed:", err);
+        router.push("/payment/fail");
+      }
     },
   });
 
@@ -155,7 +170,7 @@ const PurchaseIndividualItem = () => {
       user_id: userId,
       order_type: "single",
       delivery_address_id: selectedAddress.id,
-      payment_method: "card",
+      payment_method: "toss",
       total_amount: totalPrice,
       discount_amount: pointUsage,
       points_used: pointUsage,

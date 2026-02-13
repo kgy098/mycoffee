@@ -100,13 +100,15 @@ async def create_subscription(
 ):
     start_date = payload.first_delivery_date.date()
     next_billing_date = start_date - timedelta(days=2)
+    use_toss = (payload.payment_method or "").lower() == "toss"
+    status = SubscriptionStatus.PENDING_PAYMENT if use_toss else SubscriptionStatus.ACTIVE
 
     subscription = Subscription(
         user_id=payload.user_id,
         blend_id=payload.blend_id,
         start_date=start_date,
         next_billing_date=next_billing_date,
-        status=SubscriptionStatus.ACTIVE,
+        status=status,
         payment_method=payload.payment_method,
         total_amount=payload.total_amount,
         delivery_address_id=payload.delivery_address_id,

@@ -11,6 +11,7 @@ class SubscriptionStatus(str, PyEnum):
     PAUSED = "paused"
     CANCELLED = "cancelled"
     EXPIRED = "expired"
+    PENDING_PAYMENT = "pending_payment"  # 토스 결제 완료 대기
 
 
 class Subscription(Base):
