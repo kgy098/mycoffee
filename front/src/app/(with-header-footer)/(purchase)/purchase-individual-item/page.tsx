@@ -140,7 +140,9 @@ const PurchaseIndividualItem = () => {
         });
       } catch (err) {
         console.error("Toss payment request failed:", err);
-        router.push("/payment/fail");
+        const msg = (err as Error)?.message ?? "";
+        const isScriptError = msg.includes("불러오지 못했습니다") || msg.includes("스크립트를 불러올 수 없습니다");
+        router.push(isScriptError ? "/payment/fail?reason=script" : "/payment/fail");
       }
     },
   });

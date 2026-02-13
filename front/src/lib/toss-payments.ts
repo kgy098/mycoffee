@@ -32,14 +32,21 @@ function loadScript(src: string): Promise<void> {
     }
     const existing = document.querySelector(`script[src="${src}"]`);
     if (existing) {
-      resolve();
+      if (window.TossPayments) resolve();
+      else existing.addEventListener("load", () => resolve());
       return;
     }
     const script = document.createElement("script");
     script.src = src;
     script.async = true;
+    script.crossOrigin = "anonymous";
     script.onload = () => resolve();
-    script.onerror = () => reject(new Error(`Failed to load ${src}`));
+    script.onerror = () =>
+      reject(
+        new Error(
+          "결제 창을 불러오지 못했습니다. 광고 차단 기능을 해제하거나 네트워크를 확인한 뒤 다시 시도해 주세요."
+        )
+      );
     document.head.appendChild(script);
   });
 }

@@ -1,4 +1,5 @@
 import type { Metadata } from "next";
+import Script from "next/script";
 import { Geist, Geist_Mono } from "next/font/google";
 import { suite } from "./fonts";
 import "./globals.css";
@@ -36,6 +37,11 @@ export default function RootLayout({
 }>) {
   return (
     <html lang="en">
+      <Script
+        src="https://js.tosspayments.com/v2/payment"
+        strategy="lazyOnload"
+        crossOrigin="anonymous"
+      />
       <body
         className={`${geistSans.variable} ${geistMono.variable} ${suite.variable} antialiased`}
       >
