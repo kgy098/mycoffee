@@ -7,6 +7,7 @@ from datetime import datetime
 
 from app.database import get_db
 from app.models import Review, Blend, User, OrderItem, Order, PointsLedger
+from app.models.points_ledger import PointsTransactionType
 from pydantic import BaseModel
 
 router = APIRouter()
@@ -221,10 +222,9 @@ async def create_review(
     if payload.photo_url:
         ledger = PointsLedger(
             user_id=payload.user_id,
-            change_amount=1000,
+            transaction_type=PointsTransactionType.EARNED,
+            points=1000,
             reason="review",
-            related_id=review.id,
-            note="포토 리뷰 작성 보상",
         )
         db.add(ledger)
         review.points_awarded = True

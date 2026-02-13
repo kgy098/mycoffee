@@ -24,6 +24,7 @@ from app.models import (
     ScoreScale,
     Review,
 )
+from app.models.points_ledger import PointsTransactionType
 from app.utils.security import decode_access_token, get_password_hash
 
 
@@ -682,20 +683,29 @@ async def list_point_transactions(
         )
 
     if txn_type == "earned":
-        query = query.filter(PointsLedger.change_amount > 0)
+        query = query.filter(PointsLedger.transaction_type == PointsTransactionType.EARNED)
     elif txn_type == "used":
-        query = query.filter(PointsLedger.change_amount < 0)
+        query = query.filter(PointsLedger.transaction_type == PointsTransactionType.SPENT)
     elif txn_type == "canceled":
         query = query.filter(PointsLedger.reason == "refund")
 
     results = query.order_by(PointsLedger.created_at.desc()).offset(skip).limit(limit).all()
+
+    def _change_amount(item: PointsLedger) -> int:
+        t = item.transaction_type
+        if not t:
+            return getattr(item, "points", 0) or 0
+        v = t.value if hasattr(t, "value") else str(t)
+        pts = item.points or 0
+        return pts if v == "earned" else -pts
+
     return [
         AdminPointsTransactionResponse(
             id=item.id,
             user_id=item.user_id,
-            change_amount=item.change_amount,
-            reason=item.reason,
-            note=item.note,
+            change_amount=_change_amount(item),
+            reason=item.reason or "",
+            note=getattr(item, "note", None),
             created_at=item.created_at,
         )
         for item in results
